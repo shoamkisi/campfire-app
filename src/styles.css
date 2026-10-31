@@ -1,0 +1,350 @@
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-label);
+  font-size: var(--size-label);
+  font-weight: 400;
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+button:focus-visible {
+  outline: var(--line) solid var(--ink);
+  outline-offset: 4px;
+}
+
+.app {
+  width: min(100%, 480px);
+  min-height: 100dvh;
+  margin: 0 auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding:
+    calc(20px + env(safe-area-inset-top))
+    22px
+    calc(14px + env(safe-area-inset-bottom));
+}
+
+.grain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: var(--grain);
+  z-index: 5;
+}
+
+.mast,
+.stage,
+.tabs,
+.hz,
+.stop {
+  position: relative;
+  z-index: 1;
+}
+
+.mast {
+  display: flex;
+  align-items: baseline;
+  min-height: 2rem;
+}
+
+.brand {
+  margin: 0;
+  letter-spacing: 0.12em;
+}
+
+.stop {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 12px;
+  z-index: 2;
+  color: var(--muted);
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px;
+}
+
+.stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+}
+
+.hero-slot {
+  position: relative;
+  width: 100%;
+  min-height: 0.78em;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-family: var(--font-hero);
+  font-size: var(--size-hero);
+  font-weight: var(--hero-weight);
+  font-variation-settings:
+    'SOFT' var(--hero-soft),
+    'WONK' var(--hero-wonk),
+    'opsz' var(--hero-opsz),
+    'wght' var(--hero-weight);
+}
+
+.hero {
+  margin: 0;
+  font-family: inherit;
+  font-size: 1em;
+  font-weight: inherit;
+  font-variation-settings: inherit;
+  line-height: 0.78;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  animation: appear var(--fade) linear;
+  transition: color var(--ease-intune) linear;
+}
+
+.hero.is-in-tune,
+.line.is-in-tune {
+  color: var(--ember);
+}
+
+.dial {
+  width: min(88vw, 380px);
+  margin-top: 0.35rem;
+}
+
+.gauge {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.arc,
+.tick,
+.needle {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: var(--line);
+}
+
+.gauge-idle .arc,
+.gauge-idle .tick {
+  stroke: var(--muted);
+}
+
+.gauge-live .arc,
+.gauge-live .tick,
+.gauge-tuning .arc,
+.gauge-tuning .tick,
+.needle {
+  stroke: var(--ink);
+}
+
+.needle,
+.ember {
+  opacity: 0;
+}
+
+.ember {
+  fill: var(--ink);
+}
+
+.gauge-live .ember {
+  opacity: 0.85;
+  animation: breath var(--breath) ease-in-out infinite;
+}
+
+.gauge-tuning .needle,
+.gauge-tuning .ember {
+  opacity: 1;
+  animation: none;
+}
+
+.gauge-tuning.is-in-tune .needle {
+  stroke: var(--ember);
+  transition: stroke var(--ease-intune) linear;
+}
+
+.gauge-tuning.is-in-tune .ember {
+  fill: var(--ember);
+  transition: fill var(--ease-intune) linear;
+}
+
+.peg {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 36px;
+  height: 52px;
+  stroke: var(--ink);
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.caption {
+  min-height: 4.8rem;
+  margin-top: 0.15rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.line {
+  margin: 0;
+  color: var(--ink);
+}
+
+.line.quiet {
+  color: var(--muted);
+}
+
+.line.is-far {
+  color: var(--clay);
+}
+
+.text-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 12px 2px;
+  color: var(--ink);
+}
+
+.ink {
+  display: block;
+  overflow: visible;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6px;
+  stroke-linecap: round;
+}
+
+.hz {
+  position: absolute;
+  left: 22px;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  margin: 0;
+  color: var(--muted);
+  z-index: 1;
+}
+
+.tabs {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  z-index: 1;
+  padding-top: 6px;
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-height: 44px;
+  padding: 8px 0 0;
+  color: var(--muted);
+}
+
+.tab.is-current {
+  color: var(--ink);
+}
+
+.soon {
+  opacity: 0.62;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes breath {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.92;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero,
+  .gauge-live .ember {
+    animation: none;
+  }
+}
