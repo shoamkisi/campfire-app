@@ -10,8 +10,9 @@ The app is meant to be opened from a link, not installed from an app store.
 2. On the phone, open `https://shoamkisi.github.io/campfire-app/`.
 3. Tap **listen**.
 4. When the phone asks, allow the microphone.
-5. Play one open string. The big letter is the note. The needle leans left when you are flat and right when you are sharp. Amber means you are in tune, within about 5 cents.
-6. To keep it on the home screen: in Safari, tap Share, then Add to Home Screen. In Chrome, tap the menu, then Install app or Add to Home screen.
+5. Play one open string. The big letter is the note. A mark on the line sits left of center when you are flat and right of center when you are sharp. Amber means you are in tune, within about 5 cents.
+6. Tap **A = 440 Hz** if you want a different reference pitch. Choose 432, 440, or 442, or step by one hertz anywhere from 430 to 450. The phone remembers it.
+7. To keep it on the home screen: in Safari, tap Share, then Add to Home Screen. In Chrome, tap the menu, then Install app or Add to Home screen.
 
 The microphone only works on a secure page. The link above is secure. A plain `http://` address on the wifi will not be.
 
@@ -52,7 +53,7 @@ npm run preview
 - The same strings, shifted flat and sharp by a known number of cents, come back with the right note, the right string, and the right offset.
 - A brighter guitar-like tone (fundamental plus harmonics, including a weaker fundamental) still reports the fundamental, not the octave.
 
-Silence, a quiet signal, and noise must return no pitch. Notes outside roughly 70–1000 Hz are rejected. The cents math has its own tests: in tune is ±5 cents, low E and high E stay distinct, and a note that sits between two strings is not claimed as either string.
+Silence, a quiet signal, and noise must return no pitch. Notes outside roughly 70–1000 Hz are rejected. The cents math has its own tests: in tune is ±5 cents, low E and high E stay distinct, and a note that sits between two strings is not claimed as either string. The same naming is checked again at A4 = 432: the detector hears those retuned strings, and the note and the cents are measured from 432 rather than 440.
 
 ## Folder structure
 

@@ -1,0 +1,152 @@
+.tuner {
+  flex: 1;
+  align-self: stretch;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tuner-readout {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.meter {
+  width: min(88vw, 380px);
+  margin-top: 1.15rem;
+}
+
+.meter-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.meter-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-linecap: round;
+  stroke-width: var(--line);
+}
+
+.meter-marker {
+  fill: var(--muted);
+  stroke: none;
+  transition: fill var(--ease-intune) linear;
+}
+
+.meter-svg.is-tuning .meter-marker {
+  fill: var(--ink);
+}
+
+.meter-svg.is-in-tune .meter-marker {
+  fill: var(--ember);
+}
+
+.cents {
+  margin: 0.95rem 0 0;
+  min-height: 1.35em;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.tuner-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding-bottom: 6px;
+}
+
+.reference {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.reference-toggle {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 12px 16px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.reference.is-open .reference-toggle {
+  color: var(--ink);
+}
+
+.reference-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding-bottom: 6px;
+}
+
+.reference-presets,
+.reference-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reference-choice,
+.reference-nudge {
+  min-width: 4.5rem;
+  min-height: 48px;
+  color: var(--muted);
+}
+
+.reference-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 6px 4px;
+  letter-spacing: 0.04em;
+}
+
+.reference-choice.is-selected {
+  color: var(--ink);
+}
+
+.reference-mark-space {
+  display: block;
+  width: 22px;
+  height: 6px;
+}
+
+.reference-step {
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.reference-nudge {
+  padding: 8px 10px;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.reference-nudge:disabled {
+  color: var(--muted);
+  opacity: 0.35;
+}
+
+.reference-now {
+  min-width: 3.25rem;
+  text-align: center;
+  color: var(--ink);
+  letter-spacing: 0.06em;
+}

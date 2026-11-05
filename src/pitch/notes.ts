@@ -1,11 +1,11 @@
-/** Concert A. Standard guitar tuning is measured from here. */
+/** Default concert A. Note names and cents use this unless a reference is passed. */
 export const A4 = 440;
 
 export const IN_TUNE_CENTS = 5;
 /** How close a pitch must be before we call it an open string. */
 export const STRING_LOCK_CENTS = 50;
 export const NEEDLE_CENTS = 50;
-/** Past this, the small cents line takes the clay hint. */
+/** A pitch this far off is marked as far. */
 export const FAR_CENTS = 35;
 
 const NOTE_NAMES = [
@@ -42,22 +42,26 @@ const OPEN_STRINGS: Array<Omit<GuitarString, 'frequency'>> = [
   { id: 'E4', letter: 'E', label: 'high E', midi: 64 },
 ];
 
-export function midiToFrequency(midi: number): number {
-  return A4 * 2 ** ((midi - 69) / 12);
+export function midiToFrequency(midi: number, a4: number = A4): number {
+  return a4 * 2 ** ((midi - 69) / 12);
 }
 
-export function frequencyToMidi(frequency: number): number {
-  return 69 + 12 * Math.log2(frequency / A4);
+export function frequencyToMidi(frequency: number, a4: number = A4): number {
+  return 69 + 12 * Math.log2(frequency / a4);
 }
 
 export function centsBetween(frequency: number, reference: number): number {
   return 1200 * Math.log2(frequency / reference);
 }
 
-export const STRINGS: readonly GuitarString[] = OPEN_STRINGS.map((string) => ({
-  ...string,
-  frequency: midiToFrequency(string.midi),
-}));
+export function openStrings(a4: number = A4): readonly GuitarString[] {
+  return OPEN_STRINGS.map((string) => ({
+    ...string,
+    frequency: midiToFrequency(string.midi, a4),
+  }));
+}
+
+export const STRINGS: readonly GuitarString[] = openStrings();
 
 export type NamedPitch = {
   letter: string;
@@ -68,24 +72,28 @@ export type NamedPitch = {
   referenceFrequency: number;
 };
 
-export function namePitch(frequency: number): NamedPitch {
-  const midiFloat = frequencyToMidi(frequency);
+export function namePitch(frequency: number, a4: number = A4): NamedPitch {
+  const midiFloat = frequencyToMidi(frequency, a4);
   const midi = Math.round(midiFloat);
-  const referenceFrequency = midiToFrequency(midi);
+  const referenceFrequency = midiToFrequency(midi, a4);
   const cents = centsBetween(frequency, referenceFrequency);
   const letter = NOTE_NAMES[((midi % 12) + 12) % 12];
   const octave = Math.floor(midi / 12) - 1;
   return { letter, octave, midi, cents, frequency, referenceFrequency };
 }
 
-export function nearestString(frequency: number): {
+export function nearestString(
+  frequency: number,
+  a4: number = A4,
+): {
   string: GuitarString;
   cents: number;
 } {
-  let best = STRINGS[0];
+  const strings = a4 === A4 ? STRINGS : openStrings(a4);
+  let best = strings[0];
   let bestAbs = Infinity;
   let bestCents = 0;
-  for (const string of STRINGS) {
+  for (const string of strings) {
     const cents = centsBetween(frequency, string.frequency);
     const abs = Math.abs(cents);
     if (abs < bestAbs) {
@@ -123,9 +131,9 @@ export type TunerDisplay = {
  * Near an open string, the letter and the cents belong to that string.
  * Anywhere else, they belong to the nearest note, and no string is claimed.
  */
-export function toDisplay(frequency: number): TunerDisplay {
-  const named = namePitch(frequency);
-  const near = nearestString(frequency);
+export function toDisplay(frequency: number, a4: number = A4): TunerDisplay {
+  const named = namePitch(frequency, a4);
+  const near = nearestString(frequency, a4);
   const lock = Math.abs(near.cents) <= STRING_LOCK_CENTS;
   const cents = lock ? near.cents : named.cents;
   const inTune = isInTune(cents);

@@ -24,4 +24,18 @@ describe('tuner preview', () => {
     expect(tuned.display.inTune).toBe(true);
     expect(tuned.display.text).toBe('in tune');
   });
+
+  it('measures the preview tone from a 432 Hz reference', () => {
+    const tuned = previewStatus('intune', 432);
+    const flat = previewStatus('flat', 432);
+    expect(tuned.status).toBe('tuning');
+    expect(flat.status).toBe('tuning');
+    if (tuned.status !== 'tuning' || flat.status !== 'tuning') return;
+    expect(tuned.display.letter).toBe('A');
+    expect(tuned.display.inTune).toBe(true);
+    expect(Math.abs(tuned.display.cents)).toBeLessThan(2);
+    expect(flat.display.letter).toBe('E');
+    expect(flat.display.inTune).toBe(false);
+    expect(flat.display.cents).toBeLessThan(-20);
+  });
 });
