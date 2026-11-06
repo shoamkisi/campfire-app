@@ -3,6 +3,7 @@ import {
   GRAIN_COUNT,
   GRAIN_RADII,
   closeness,
+  gather,
   grainRadiusCss,
   modeForFrequency,
   nodalPoints,
@@ -10,7 +11,7 @@ import {
   sandDrift,
   type NodalPoint,
 } from './cymatic';
-import { rippleProgress, shouldStartRipple } from './ripple';
+import { rippleProgress, shouldStartRipple, waveOffset } from './ripple';
 
 type Props = {
   hz: number | null;
@@ -26,8 +27,6 @@ type Grain = {
   phase: number;
   tx: number;
   ty: number;
-  jx: number;
-  jy: number;
 };
 
 /** How fast the figure and its green catch a new cents reading. */
@@ -43,23 +42,6 @@ function mulberry32(seed: number): () => number {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-function drawRipple(
-  context: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  progress: number,
-): void {
-  const reach = Math.min(width, height) * 0.48;
-  context.save();
-  context.beginPath();
-  context.arc(width / 2, height / 2, Math.max(1, progress * reach), 0, Math.PI * 2);
-  context.strokeStyle = '#EDE6DA';
-  context.globalAlpha = 0.92 * (1 - progress);
-  context.lineWidth = Math.max(2, width / 140);
-  context.stroke();
-  context.restore();
 }
 
 function clamp01(value: number): number {
@@ -82,8 +64,6 @@ function makeGrains(count: number): Grain[] {
       phase: rand() * Math.PI * 2,
       tx: x,
       ty: y,
-      jx: (rand() - 0.5) * 0.006,
-      jy: (rand() - 0.5) * 0.006,
     });
   }
   return grains;
@@ -187,21 +167,23 @@ export function SandPlate({ hz, cents, onCloseness }: Props) {
       onClosenessRef.current?.(shown);
 
       const follow = reduce.matches ? 1 : GRAIN_FOLLOW;
-      const spread = 1 - shown;
-      for (let i = 0; i < grains.length; i++) {
-        const grain = grains[i];
-        const drift = sandDrift(now, grain.phase, shown);
-        const hx = clamp01(grain.bx + drift.x);
-        const hy = clamp01(grain.by + drift.y);
-        const aimX = hx + (grain.tx + grain.jx * spread + drift.x - hx) * shown;
-        const aimY = hy + (grain.ty + grain.jy * spread + drift.y - hy) * shown;
-        grain.x += (aimX - grain.x) * follow;
-        grain.y += (aimY - grain.y) * follow;
-      }
-
+      const pull = gather(shown);
       const readingLocked = closeness(centsRef.current) === 1;
       if (shouldStartRipple(wasLocked, readingLocked, reduce.matches)) rippleStart = now;
       wasLocked = readingLocked;
+      const progress = rippleStart == null ? null : rippleProgress(now - rippleStart);
+      if (rippleStart != null && progress == null) rippleStart = null;
+
+      for (let i = 0; i < grains.length; i++) {
+        const grain = grains[i];
+        const drift = sandDrift(now, grain.phase, shown);
+        const homeX = grain.bx + drift.x;
+        const homeY = grain.by + drift.y;
+        const aimX = homeX + (grain.tx - grain.bx) * pull;
+        const aimY = homeY + (grain.ty - grain.by) * pull;
+        grain.x += (clamp01(aimX) - grain.x) * follow;
+        grain.y += (clamp01(aimY) - grain.y) * follow;
+      }
 
       context.clearRect(0, 0, width, height);
       context.fillStyle = sandColor(shown);
@@ -210,18 +192,19 @@ export function SandPlate({ hz, cents, onCloseness }: Props) {
         context.beginPath();
         for (let i = band; i < grains.length; i += GRAIN_RADII.length) {
           const grain = grains[i];
-          const x = grain.x * width;
-          const y = grain.y * height;
-          context.moveTo(x + radius, y);
-          context.arc(x, y, radius, 0, Math.PI * 2);
+          let x = grain.x;
+          let y = grain.y;
+          if (progress != null) {
+            const wave = waveOffset(x, y, progress);
+            x += wave.x;
+            y += wave.y;
+          }
+          const px = x * width;
+          const py = y * height;
+          context.moveTo(px + radius, py);
+          context.arc(px, py, radius, 0, Math.PI * 2);
         }
         context.fill();
-      }
-
-      if (rippleStart != null) {
-        const progress = rippleProgress(now - rippleStart);
-        if (progress == null) rippleStart = null;
-        else drawRipple(context, width, height, progress);
       }
 
       frame = requestAnimationFrame(tick);
