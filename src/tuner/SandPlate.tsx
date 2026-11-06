@@ -3,11 +3,14 @@ import {
   GRAIN_COUNT,
   GRAIN_RADII,
   closeness,
+  grainRadiusCss,
   modeForFrequency,
   nodalPoints,
   sandColor,
+  sandDrift,
   type NodalPoint,
 } from './cymatic';
+import { rippleProgress, shouldStartRipple } from './ripple';
 
 type Props = {
   hz: number | null;
@@ -40,6 +43,23 @@ function mulberry32(seed: number): () => number {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+function drawRipple(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  progress: number,
+): void {
+  const reach = Math.min(width, height) * 0.48;
+  context.save();
+  context.beginPath();
+  context.arc(width / 2, height / 2, Math.max(1, progress * reach), 0, Math.PI * 2);
+  context.strokeStyle = '#EDE6DA';
+  context.globalAlpha = 0.92 * (1 - progress);
+  context.lineWidth = Math.max(2, width / 140);
+  context.stroke();
+  context.restore();
 }
 
 function clamp01(value: number): number {
@@ -131,6 +151,8 @@ export function SandPlate({ hz, cents, onCloseness }: Props) {
     const grains = makeGrains(GRAIN_COUNT);
     let modeId = '';
     let shown = 0;
+    let wasLocked = false;
+    let rippleStart: number | null = null;
     let width = 1;
     let height = 1;
     let dpr = 1;
@@ -164,22 +186,27 @@ export function SandPlate({ hz, cents, onCloseness }: Props) {
       if (Math.abs(target - shown) < 0.004) shown = target;
       onClosenessRef.current?.(shown);
 
-      const wobble = (1 - shown) * 0.028;
       const follow = reduce.matches ? 1 : GRAIN_FOLLOW;
       const spread = 1 - shown;
-      for (const grain of grains) {
-        const hx = clamp01(grain.bx + Math.sin(now * 0.00105 + grain.phase) * wobble);
-        const hy = clamp01(grain.by + Math.cos(now * 0.00082 + grain.phase * 1.7) * wobble);
-        const aimX = hx + (grain.tx + grain.jx * spread - hx) * shown;
-        const aimY = hy + (grain.ty + grain.jy * spread - hy) * shown;
+      for (let i = 0; i < grains.length; i++) {
+        const grain = grains[i];
+        const drift = sandDrift(now, grain.phase, shown);
+        const hx = clamp01(grain.bx + drift.x);
+        const hy = clamp01(grain.by + drift.y);
+        const aimX = hx + (grain.tx + grain.jx * spread + drift.x - hx) * shown;
+        const aimY = hy + (grain.ty + grain.jy * spread + drift.y - hy) * shown;
         grain.x += (aimX - grain.x) * follow;
         grain.y += (aimY - grain.y) * follow;
       }
 
+      const readingLocked = closeness(centsRef.current) === 1;
+      if (shouldStartRipple(wasLocked, readingLocked, reduce.matches)) rippleStart = now;
+      wasLocked = readingLocked;
+
       context.clearRect(0, 0, width, height);
       context.fillStyle = sandColor(shown);
       for (let band = 0; band < GRAIN_RADII.length; band++) {
-        const radius = Math.max(0.4, GRAIN_RADII[band] * dpr);
+        const radius = grainRadiusCss(band, shown) * dpr;
         context.beginPath();
         for (let i = band; i < grains.length; i += GRAIN_RADII.length) {
           const grain = grains[i];
@@ -189,6 +216,12 @@ export function SandPlate({ hz, cents, onCloseness }: Props) {
           context.arc(x, y, radius, 0, Math.PI * 2);
         }
         context.fill();
+      }
+
+      if (rippleStart != null) {
+        const progress = rippleProgress(now - rippleStart);
+        if (progress == null) rippleStart = null;
+        else drawRipple(context, width, height, progress);
       }
 
       frame = requestAnimationFrame(tick);

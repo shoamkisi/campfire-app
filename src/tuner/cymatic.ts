@@ -15,8 +15,10 @@ export const LETTER_REST = skins.campfire.text;
 
 /** Fine dust. Enough grains to draw a continuous line, each one a fraction of a pixel. */
 export const GRAIN_COUNT = 6800;
-/** CSS-pixel radii. Smaller than a mosaic block. */
-export const GRAIN_RADII = [0.65, 0.85, 1.05] as const;
+/** CSS-pixel radii. The same fine size loose or locked. */
+export const GRAIN_RADII = [0.42, 0.52, 0.64] as const;
+/** Gentle drift, in plate units. It does not shrink when the figure locks. */
+export const SAND_WANDER = 0.018;
 
 /**
  * At this many cents the sand is fully scattered.
@@ -94,6 +96,27 @@ export function mixHex(from: string, to: string, t: number): string {
 
 export function sandColor(amount: number): string {
   return mixHex(SAND_GRAY, SAND_GREEN, amount);
+}
+
+/** Drawn radius in CSS pixels. Closeness does not scale it. */
+export function grainRadiusCss(index: number, closeness: number): number {
+  const count = GRAIN_RADII.length;
+  const band = ((index % count) + count) % count;
+  const radius = GRAIN_RADII[band];
+  return Number.isFinite(closeness) ? radius : radius;
+}
+
+/** Slow wander around wherever the grain is. Locked sand uses the same reach. */
+export function sandDrift(
+  timeMs: number,
+  phase: number,
+  closeness: number,
+): { x: number; y: number } {
+  const reach = Number.isFinite(closeness) ? SAND_WANDER : SAND_WANDER;
+  return {
+    x: Math.sin(timeMs * 0.00105 + phase) * reach,
+    y: Math.cos(timeMs * 0.00082 + phase * 1.7) * reach,
+  };
 }
 
 export function letterColor(amount: number): string {
