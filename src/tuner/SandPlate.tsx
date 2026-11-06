@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import {
   GRAIN_COUNT,
+  GRAIN_RADII,
   closeness,
   modeForFrequency,
   nodalPoints,
@@ -26,7 +27,10 @@ type Grain = {
   jy: number;
 };
 
-const SIZES = [1.9, 2.4, 2.9];
+/** How fast the figure and its green catch a new cents reading. */
+const ORGANIZE_EASE = 0.22;
+/** How fast each grain walks toward that figure. */
+const GRAIN_FOLLOW = 0.28;
 
 function mulberry32(seed: number): () => number {
   let state = seed;
@@ -58,26 +62,50 @@ function makeGrains(count: number): Grain[] {
       phase: rand() * Math.PI * 2,
       tx: x,
       ty: y,
-      jx: (rand() - 0.5) * 0.01,
-      jy: (rand() - 0.5) * 0.01,
+      jx: (rand() - 0.5) * 0.006,
+      jy: (rand() - 0.5) * 0.006,
     });
   }
   return grains;
 }
 
-/** Sand walks toward the nearest part of the figure, so the shape appears as it gathers. */
+/**
+ * Nearest point on the figure, so sand gathers into the shape while it is still forming.
+ * A coarse grid keeps the search cheap when the note changes.
+ */
 function assignTargets(grains: Grain[], points: readonly NodalPoint[]): void {
   if (points.length === 0) return;
+  const cells = 32;
+  const bins: number[][] = Array.from({ length: cells * cells }, () => []);
+  for (let i = 0; i < points.length; i++) {
+    const cx = Math.min(cells - 1, Math.floor(points[i].x * cells));
+    const cy = Math.min(cells - 1, Math.floor(points[i].y * cells));
+    bins[cy * cells + cx].push(i);
+  }
+
   for (const grain of grains) {
+    const gx = Math.min(cells - 1, Math.max(0, Math.floor(grain.bx * cells)));
+    const gy = Math.min(cells - 1, Math.max(0, Math.floor(grain.by * cells)));
     let best = 0;
     let bestDistance = Infinity;
-    for (let i = 0; i < points.length; i++) {
-      const dx = points[i].x - grain.bx;
-      const dy = points[i].y - grain.by;
-      const distance = dx * dx + dy * dy;
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        best = i;
+    for (let radius = 0; radius < cells; radius++) {
+      if (radius > 0 && bestDistance < ((radius - 1) / cells) ** 2) break;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          if (radius > 0 && Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
+          const cx = gx + dx;
+          const cy = gy + dy;
+          if (cx < 0 || cy < 0 || cx >= cells || cy >= cells) continue;
+          for (const index of bins[cy * cells + cx]) {
+            const ox = points[index].x - grain.bx;
+            const oy = points[index].y - grain.by;
+            const distance = ox * ox + oy * oy;
+            if (distance < bestDistance) {
+              bestDistance = distance;
+              best = index;
+            }
+          }
+        }
       }
     }
     grain.tx = points[best].x;
@@ -131,29 +159,36 @@ export function SandPlate({ hz, cents, onCloseness }: Props) {
       }
 
       const target = closeness(centsRef.current);
-      const ease = reduce.matches ? 1 : 0.05;
+      const ease = reduce.matches ? 1 : ORGANIZE_EASE;
       shown += (target - shown) * ease;
       if (Math.abs(target - shown) < 0.004) shown = target;
       onClosenessRef.current?.(shown);
 
-      const wobble = (1 - shown) * 0.032;
-      const follow = reduce.matches ? 1 : 0.085;
-      const tighten = 0.4 + 0.6 * shown;
+      const wobble = (1 - shown) * 0.028;
+      const follow = reduce.matches ? 1 : GRAIN_FOLLOW;
+      const spread = 1 - shown;
       for (const grain of grains) {
         const hx = clamp01(grain.bx + Math.sin(now * 0.00105 + grain.phase) * wobble);
         const hy = clamp01(grain.by + Math.cos(now * 0.00082 + grain.phase * 1.7) * wobble);
-        const aimX = hx + (grain.tx + grain.jx * tighten - hx) * shown;
-        const aimY = hy + (grain.ty + grain.jy * tighten - hy) * shown;
+        const aimX = hx + (grain.tx + grain.jx * spread - hx) * shown;
+        const aimY = hy + (grain.ty + grain.jy * spread - hy) * shown;
         grain.x += (aimX - grain.x) * follow;
         grain.y += (aimY - grain.y) * follow;
       }
 
       context.clearRect(0, 0, width, height);
       context.fillStyle = sandColor(shown);
-      for (let i = 0; i < grains.length; i++) {
-        const grain = grains[i];
-        const size = SIZES[i % 3] * dpr;
-        context.fillRect(grain.x * width - size * 0.5, grain.y * height - size * 0.5, size, size);
+      for (let band = 0; band < GRAIN_RADII.length; band++) {
+        const radius = Math.max(0.4, GRAIN_RADII[band] * dpr);
+        context.beginPath();
+        for (let i = band; i < grains.length; i += GRAIN_RADII.length) {
+          const grain = grains[i];
+          const x = grain.x * width;
+          const y = grain.y * height;
+          context.moveTo(x + radius, y);
+          context.arc(x, y, radius, 0, Math.PI * 2);
+        }
+        context.fill();
       }
 
       frame = requestAnimationFrame(tick);

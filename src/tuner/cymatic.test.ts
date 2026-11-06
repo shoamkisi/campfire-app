@@ -11,6 +11,7 @@ import { tone } from '../pitch/synth';
 import { skins } from '../theme/tokens';
 import {
   GRAIN_COUNT,
+  GRAIN_RADII,
   LETTER_REST,
   PLATE_MODES,
   SAND_GRAY,
@@ -161,8 +162,10 @@ describe('cymatic plate', () => {
   });
 
   it('lays each figure on its nodal lines, clover included', () => {
-    expect(GRAIN_COUNT).toBeGreaterThanOrEqual(1000);
-    expect(GRAIN_COUNT).toBeLessThanOrEqual(2500);
+    expect(GRAIN_COUNT).toBeGreaterThanOrEqual(5000);
+    expect(GRAIN_COUNT).toBeLessThanOrEqual(10000);
+    expect(Math.max(...GRAIN_RADII)).toBeLessThan(1.15);
+    expect(Math.min(...GRAIN_RADII)).toBeGreaterThan(0.2);
 
     for (const mode of PLATE_MODES) {
       const points = nodalPoints(mode);

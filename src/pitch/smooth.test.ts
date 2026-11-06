@@ -42,6 +42,19 @@ describe('pitch smoother', () => {
     expect(smoother.push(null)).toBeNull();
   });
 
+  it('follows a peg turn during the hold instead of freezing the old pitch', () => {
+    const smoother = createFrequencySmoother();
+    smoother.push({ frequency: 110 });
+    smoother.push({ frequency: 110 });
+    for (let i = 0; i < 40; i++) expect(smoother.push(null)).toBeCloseTo(110, 2);
+
+    const slid = 110 * 2 ** (-20 / 1200);
+    let moved = 110;
+    for (let i = 0; i < 3; i++) moved = smoother.push({ frequency: slid }) ?? 110;
+    expect(Math.abs(moved - slid)).toBeLessThan(0.4);
+    expect(Math.abs(moved - 110)).toBeGreaterThan(0.4);
+  });
+
   it('keeps tracking a note that is still arriving, and swaps when a new one settles', () => {
     const smoother = createFrequencySmoother();
     smoother.push({ frequency: 110 });
