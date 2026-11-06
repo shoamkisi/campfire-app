@@ -18,7 +18,7 @@ export const GRAIN_COUNT = 6800;
 /** CSS-pixel radii. The same fine size loose or locked. */
 export const GRAIN_RADII = [0.42, 0.52, 0.64] as const;
 /** Gentle drift, in plate units. It does not shrink when the figure locks. */
-export const SAND_WANDER = 0.018;
+export const SAND_WANDER = 0.011;
 
 /**
  * At this many cents the sand is fully scattered.
@@ -104,6 +104,17 @@ export function grainRadiusCss(index: number, closeness: number): number {
   const band = ((index % count) + count) % count;
   const radius = GRAIN_RADII[band];
   return Number.isFinite(closeness) ? radius : radius;
+}
+
+/**
+ * How far grains have left their scatter homes.
+ * Sharper than the color mix, so a forming figure sits close to the nodes
+ * while the sand is still only partly green.
+ */
+export function gather(closeness: number): number {
+  if (!Number.isFinite(closeness)) return 0;
+  const u = closeness < 0 ? 0 : closeness > 1 ? 1 : closeness;
+  return 1 - (1 - u) * (1 - u);
 }
 
 /** Slow wander around wherever the grain is. Locked sand uses the same reach. */
@@ -199,7 +210,7 @@ export function nodalPoints(mode: PlateMode): readonly NodalPoint[] {
     const y = (iy + 0.5) / grid;
     for (let ix = 0; ix < grid; ix++) {
       const x = (ix + 0.5) / grid;
-      if (nodeScore(mode, x, y) < 0.014) found.push({ x, y });
+      if (nodeScore(mode, x, y) < 0.008) found.push({ x, y });
     }
   }
   const cap = 1800;

@@ -13,6 +13,7 @@ import {
   GRAIN_COUNT,
   GRAIN_RADII,
   SAND_WANDER,
+  gather,
   grainRadiusCss,
   sandDrift,
   LETTER_REST,
@@ -172,6 +173,10 @@ describe('cymatic plate', () => {
     expect(grainRadiusCss(0, 0)).toBe(grainRadiusCss(0, 1));
     expect(grainRadiusCss(1, 0.4)).toBe(grainRadiusCss(1, 1));
     expect(grainRadiusCss(2, 1)).toBe(GRAIN_RADII[2]);
+    expect(gather(0)).toBe(0);
+    expect(gather(1)).toBe(1);
+    expect(gather(0.64)).toBeGreaterThan(0.64);
+    expect(gather(0.64)).toBeGreaterThan(0.8);
 
     const loose = sandDrift(1400, 0.7, 0);
     const locked = sandDrift(1400, 0.7, 1);
