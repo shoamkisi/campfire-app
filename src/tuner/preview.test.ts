@@ -6,6 +6,9 @@ describe('tuner preview', () => {
     expect(readPreview('?preview=flat')).toBe('flat');
     expect(readPreview('?preview=in-tune')).toBe('intune');
     expect(readPreview('?preview=far')).toBe('far');
+    expect(readPreview('?preview=hint')).toBe('hint');
+    expect(readPreview('?preview=loose')).toBe('loose');
+    expect(readPreview('?preview=near')).toBe('near');
     expect(readPreview('?preview=sharp')).toBe('sharp');
     expect(readPreview('?preview=high')).toBe('high');
     expect(readPreview('')).toBeNull();
@@ -63,5 +66,27 @@ describe('tuner preview', () => {
     expect(high.display.stringLabel).toBe('high E');
     expect(high.display.inTune).toBe(true);
     expect(high.display.hz).toBeGreaterThan(300);
+  });
+
+  it('steps the same A string from a hint through a loose figure to nearly sharp', () => {
+    const hint = previewStatus('hint');
+    const loose = previewStatus('loose');
+    const near = previewStatus('near');
+    expect(hint.status).toBe('tuning');
+    expect(loose.status).toBe('tuning');
+    expect(near.status).toBe('tuning');
+    if (hint.status !== 'tuning' || loose.status !== 'tuning' || near.status !== 'tuning') return;
+    expect(hint.display.letter).toBe('A');
+    expect(loose.display.letter).toBe('A');
+    expect(near.display.letter).toBe('A');
+    expect(hint.display.cents).toBeLessThan(-34);
+    expect(hint.display.cents).toBeGreaterThan(-42);
+    expect(loose.display.cents).toBeLessThan(-28);
+    expect(loose.display.cents).toBeGreaterThan(-36);
+    expect(near.display.cents).toBeLessThan(-12);
+    expect(near.display.cents).toBeGreaterThan(-20);
+    expect(hint.display.inTune).toBe(false);
+    expect(loose.display.inTune).toBe(false);
+    expect(near.display.inTune).toBe(false);
   });
 });

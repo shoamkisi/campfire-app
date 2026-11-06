@@ -1,7 +1,8 @@
 /**
  * Chladni figures for the tuner plate.
- * Frequency picks the figure. One closeness number, from the cents,
- * both gathers the sand and turns it from gray to green.
+ * Frequency picks the figure. Closeness, from the cents, turns the sand
+ * from gray to green. Gather is a separate, slower curve: far from the
+ * note the figure stays scattered, and it only sharpens as the note locks.
  */
 
 import { IN_TUNE_CENTS, isInTune } from '../pitch/notes';
@@ -19,6 +20,15 @@ export const GRAIN_COUNT = 6800;
 export const GRAIN_RADII = [0.42, 0.52, 0.64] as const;
 /** Gentle drift, in plate units. It does not shrink when the figure locks. */
 export const SAND_WANDER = 0.011;
+
+/**
+ * How fast the closeness reading eases toward a new cents value.
+ * Low enough that the green and the figure ease in, rather than snapping.
+ */
+export const ORGANIZE_EASE = 0.07;
+
+/** How fast each grain walks toward its aim. Paired with the ease above. */
+export const GRAIN_FOLLOW = 0.1;
 
 /**
  * At this many cents the sand is fully scattered.
@@ -107,14 +117,15 @@ export function grainRadiusCss(index: number, closeness: number): number {
 }
 
 /**
- * How far grains have left their scatter homes.
- * Sharper than the color mix, so a forming figure sits close to the nodes
- * while the sand is still only partly green.
+ * How organized the figure is. Separate from the gray-to-green mix.
+ * Closeness is already an ease-out, which made a moderate miss look finished.
+ * This ease-in keeps that miss loose and only reaches the tight nodal figure
+ * when closeness itself is locked at 1.
  */
 export function gather(closeness: number): number {
   if (!Number.isFinite(closeness)) return 0;
   const u = closeness < 0 ? 0 : closeness > 1 ? 1 : closeness;
-  return 1 - (1 - u) * (1 - u);
+  return u * u * u;
 }
 
 /** Slow wander around wherever the grain is. Locked sand uses the same reach. */
@@ -134,7 +145,7 @@ export function letterColor(amount: number): string {
   return mixHex(LETTER_REST, SAND_GREEN, amount);
 }
 
-/** Pattern, sand, letter, and the line under the plate all read this same closeness. */
+/** Sand, letter, and the line read closeness. Organization is the looser gather curve. */
 export function plateReadout(cents: number | null, hz: number | null): {
   closeness: number;
   organization: number;
@@ -150,7 +161,7 @@ export function plateReadout(cents: number | null, hz: number | null): {
   const sand = sandColor(amount);
   return {
     closeness: amount,
-    organization: amount,
+    organization: gather(amount),
     sand,
     line: sand,
     letter: letterColor(amount),
