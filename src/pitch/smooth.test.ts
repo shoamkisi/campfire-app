@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createFrequencySmoother } from './smooth';
+import { RING_HOLD_FRAMES, RING_HOLD_MS, TUNER_FRAME_MS, createFrequencySmoother } from './smooth';
 
 describe('pitch smoother', () => {
   it('settles on the median instead of the latest jitter', () => {
@@ -27,5 +27,33 @@ describe('pitch smoother', () => {
     expect(smoother.push(null)).toBeCloseTo(146.83, 2);
     expect(smoother.push(null)).toBeCloseTo(146.83, 2);
     expect(smoother.push(null)).toBeNull();
+  });
+
+  it('keeps a ringing note for several seconds, then clears on true silence', () => {
+    expect(RING_HOLD_MS).toBeGreaterThanOrEqual(4000);
+    expect(RING_HOLD_MS).toBeLessThanOrEqual(7000);
+    expect(RING_HOLD_FRAMES * TUNER_FRAME_MS).toBe(RING_HOLD_MS);
+
+    const smoother = createFrequencySmoother();
+    smoother.push({ frequency: 82.41 });
+    for (let i = 0; i < RING_HOLD_FRAMES - 1; i++) {
+      expect(smoother.push(null)).toBeCloseTo(82.41, 2);
+    }
+    expect(smoother.push(null)).toBeNull();
+  });
+
+  it('keeps tracking a note that is still arriving, and swaps when a new one settles', () => {
+    const smoother = createFrequencySmoother();
+    smoother.push({ frequency: 110 });
+    const flatter = 110 * 2 ** (-10 / 1200);
+    const tracked = smoother.push({ frequency: flatter });
+    expect(tracked).toBeLessThan(110);
+    expect(tracked).toBeGreaterThan(flatter - 0.01);
+
+    for (let i = 0; i < 12; i++) expect(smoother.push(null)).toBeCloseTo(tracked!, 2);
+
+    expect(smoother.push({ frequency: 146.83 })).toBeCloseTo(tracked!, 2);
+    expect(smoother.push({ frequency: 146.83 })).toBeCloseTo(tracked!, 2);
+    expect(smoother.push({ frequency: 146.83 })).toBeCloseTo(146.83, 2);
   });
 });

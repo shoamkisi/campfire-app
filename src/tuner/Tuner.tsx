@@ -41,13 +41,14 @@ export function Tuner({ preview }: Props) {
   const [closeness, setCloseness] = useState(0);
   const closenessRef = useRef(0);
   const handleCloseness = useCallback((amount: number) => {
-    if (Math.abs(amount - closenessRef.current) < 0.012) return;
+    const crossedLock = (amount === 1) !== (closenessRef.current === 1);
+    if (!crossedLock && Math.abs(amount - closenessRef.current) < 0.012) return;
     closenessRef.current = amount;
     setCloseness(amount);
   }, []);
 
   return (
-    <div className="tuner">
+    <div className={closeness === 1 ? 'tuner is-locked' : 'tuner'}>
       <div className="tuner-readout">
         <div className="hero-slot" aria-hidden={tuning ? undefined : true}>
           {tuning ? (

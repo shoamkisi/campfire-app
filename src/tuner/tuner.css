@@ -22,6 +22,31 @@
   transition: none;
 }
 
+@keyframes in-tune-breath {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.tuner.is-locked .hero,
+.tuner.is-locked .meter-svg,
+.tuner.is-locked .plate canvas {
+  animation: in-tune-breath var(--breath) ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tuner.is-locked .hero,
+  .tuner.is-locked .meter-svg,
+  .tuner.is-locked .plate canvas {
+    animation: none;
+    opacity: 1;
+  }
+}
+
 .plate {
   width: min(74vw, 300px);
   aspect-ratio: 1;

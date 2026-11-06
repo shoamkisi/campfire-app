@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { detectPitch } from '../pitch/mpm';
 import { toDisplay, type TunerDisplay } from '../pitch/notes';
-import { createFrequencySmoother, type FrequencySmoother } from '../pitch/smooth';
+import { TUNER_FRAME_MS, createFrequencySmoother, type FrequencySmoother } from '../pitch/smooth';
 
 export type MicReason = 'blocked' | 'missing' | 'busy' | 'insecure';
 
@@ -104,7 +104,7 @@ export function useTuner(paused: boolean, a4: number) {
       let last = 0;
       const loop = (time: number) => {
         if (engineRef.current !== engine) return;
-        if (time - last >= 48) {
+        if (time - last >= TUNER_FRAME_MS) {
           last = time;
           readTimeDomain(analyser, engine.buffer);
           const found = detectPitch(engine.buffer, context.sampleRate);
