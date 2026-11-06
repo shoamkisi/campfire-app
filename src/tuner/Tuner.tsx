@@ -48,7 +48,7 @@ export function Tuner({ preview }: Props) {
   }, []);
 
   return (
-    <div className={closeness === 1 ? 'tuner is-locked' : 'tuner'}>
+    <div className="tuner">
       <div className="tuner-readout">
         <div className="hero-slot" aria-hidden={tuning ? undefined : true}>
           {tuning ? (

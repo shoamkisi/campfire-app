@@ -12,6 +12,9 @@ import { skins } from '../theme/tokens';
 import {
   GRAIN_COUNT,
   GRAIN_RADII,
+  SAND_WANDER,
+  grainRadiusCss,
+  sandDrift,
   LETTER_REST,
   PLATE_MODES,
   SAND_GRAY,
@@ -164,8 +167,20 @@ describe('cymatic plate', () => {
   it('lays each figure on its nodal lines, clover included', () => {
     expect(GRAIN_COUNT).toBeGreaterThanOrEqual(5000);
     expect(GRAIN_COUNT).toBeLessThanOrEqual(10000);
-    expect(Math.max(...GRAIN_RADII)).toBeLessThan(1.15);
+    expect(Math.max(...GRAIN_RADII)).toBeLessThan(0.8);
     expect(Math.min(...GRAIN_RADII)).toBeGreaterThan(0.2);
+    expect(grainRadiusCss(0, 0)).toBe(grainRadiusCss(0, 1));
+    expect(grainRadiusCss(1, 0.4)).toBe(grainRadiusCss(1, 1));
+    expect(grainRadiusCss(2, 1)).toBe(GRAIN_RADII[2]);
+
+    const loose = sandDrift(1400, 0.7, 0);
+    const locked = sandDrift(1400, 0.7, 1);
+    expect(locked.x).toBeCloseTo(loose.x, 8);
+    expect(locked.y).toBeCloseTo(loose.y, 8);
+    expect(Math.hypot(locked.x, locked.y)).toBeGreaterThan(0.008);
+    expect(Math.hypot(locked.x, locked.y)).toBeLessThanOrEqual(SAND_WANDER * Math.SQRT2 + 1e-9);
+    const later = sandDrift(3200, 0.7, 1);
+    expect(later.x).not.toBeCloseTo(locked.x, 2);
 
     for (const mode of PLATE_MODES) {
       const points = nodalPoints(mode);
