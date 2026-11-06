@@ -1,9 +1,15 @@
 /**
- * Keeps the needle from chasing every wobble.
+ * Keeps the reading from chasing every wobble.
  * A short median rejects single bad frames. A run of new pitches
- * is required before the note is allowed to change. Brief silence
- * holds the last pitch so a string decay does not flicker.
+ * is required before the note is allowed to change. After the
+ * detector goes quiet, the last pitch stays up long enough to turn a peg.
  */
+
+/** How often the live tuner asks the smoother for a pitch. */
+export const TUNER_FRAME_MS = 48;
+/** Keep the last note this long after detections stop. */
+export const RING_HOLD_MS = 6000;
+export const RING_HOLD_FRAMES = Math.round(RING_HOLD_MS / TUNER_FRAME_MS);
 
 export type PitchFrame = { frequency: number } | null;
 
@@ -20,7 +26,7 @@ export function createFrequencySmoother(options?: {
   stickCents?: number;
 }): FrequencySmoother {
   const window = options?.window ?? 5;
-  const hold = options?.hold ?? 8;
+  const hold = options?.hold ?? RING_HOLD_FRAMES;
   const switchAfter = options?.switchAfter ?? 3;
   const stickCents = options?.stickCents ?? 70;
 

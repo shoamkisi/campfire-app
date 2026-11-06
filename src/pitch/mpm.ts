@@ -31,7 +31,11 @@ const DEFAULTS = {
   maxFrequency: 1000,
   peakThreshold: 0.9,
   clarityThreshold: 0.75,
-  rmsThreshold: 0.008,
+  /**
+   * A ringing string falls well under a louder gate while it is still easy to hear.
+   * This stays above numerical silence and the tiny 0.0001 test tone.
+   */
+  rmsThreshold: 0.0015,
 };
 
 export function detectPitch(

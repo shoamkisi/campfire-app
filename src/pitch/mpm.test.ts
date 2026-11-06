@@ -85,6 +85,9 @@ describe('McLeod pitch detection', () => {
     const sampleRate = 48000;
     expect(detectPitch(silence(BUFFER), sampleRate)).toBeNull();
     expect(detectPitch(tone(110, sampleRate, BUFFER, 0.0001), sampleRate)).toBeNull();
+    const quiet = detectPitch(tone(110, sampleRate, BUFFER, 0.004), sampleRate);
+    expect(quiet, 'a quiet ring should still have a pitch').not.toBeNull();
+    expect(centsOff(quiet!.frequency, 110)).toBeLessThan(1.5);
     expect(detectPitch(whiteNoise(BUFFER, 0.25, 7), sampleRate)).toBeNull();
 
     const biased = tone(110, sampleRate, BUFFER);
