@@ -98,11 +98,12 @@ export function letterColor(amount: number): string {
   return mixHex(LETTER_REST, SAND_GREEN, amount);
 }
 
-/** Pattern, sand color, and letter color all read this same closeness. */
+/** Pattern, sand, letter, and the line under the plate all read this same closeness. */
 export function plateReadout(cents: number | null, hz: number | null): {
   closeness: number;
   organization: number;
   sand: string;
+  line: string;
   letter: string;
   locked: boolean;
   modeId: string | null;
@@ -110,10 +111,12 @@ export function plateReadout(cents: number | null, hz: number | null): {
   const amount = closeness(cents);
   const mode =
     hz == null || !Number.isFinite(hz) || hz <= 0 ? null : modeForFrequency(hz);
+  const sand = sandColor(amount);
   return {
     closeness: amount,
     organization: amount,
-    sand: sandColor(amount),
+    sand,
+    line: sand,
     letter: letterColor(amount),
     locked: amount === 1,
     modeId: mode ? mode.id : null,

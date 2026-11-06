@@ -6,6 +6,7 @@ describe('tuner preview', () => {
     expect(readPreview('?preview=flat')).toBe('flat');
     expect(readPreview('?preview=in-tune')).toBe('intune');
     expect(readPreview('?preview=far')).toBe('far');
+    expect(readPreview('?preview=sharp')).toBe('sharp');
     expect(readPreview('?preview=high')).toBe('high');
     expect(readPreview('')).toBeNull();
   });
@@ -51,6 +52,13 @@ describe('tuner preview', () => {
     expect(far.display.stringLabel).toBe('low E');
     expect(far.display.inTune).toBe(false);
     expect(far.display.cents).toBeLessThan(-40);
+    const sharp = previewStatus('sharp');
+    expect(sharp.status).toBe('tuning');
+    if (sharp.status === 'tuning') {
+      expect(sharp.display.inTune).toBe(false);
+      expect(sharp.display.cents).toBeGreaterThan(30);
+      expect(sharp.display.text).toContain('sharp');
+    }
     expect(high.display.letter).toBe('E');
     expect(high.display.stringLabel).toBe('high E');
     expect(high.display.inTune).toBe(true);
