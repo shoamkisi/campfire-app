@@ -23,9 +23,9 @@
 }
 
 .plate {
-  width: min(74vw, 300px);
+  width: min(100vw, 460px);
   aspect-ratio: 1;
-  margin-top: 0.15rem;
+  margin-top: 0;
 }
 
 .plate canvas {

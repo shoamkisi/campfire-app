@@ -10,11 +10,17 @@ import {
 import { tone } from '../pitch/synth';
 import { skins } from '../theme/tokens';
 import {
+  FADE_END,
+  FADE_START,
+  FIGURE_LIMIT,
   GRAIN_COUNT,
   GRAIN_FOLLOW,
   GRAIN_RADII,
   ORGANIZE_EASE,
   SAND_WANDER,
+  SCATTER_RADIUS,
+  besselJ,
+  edgeFade,
   gather,
   grainRadiusCss,
   sandDrift,
@@ -49,11 +55,13 @@ describe('cymatic plate', () => {
     const middle = modeForFrequency(STRINGS[3].frequency);
     const high = modeForFrequency(STRINGS[5].frequency);
     const above = modeForFrequency(700);
-    expect(low.id).toBe('clover');
+    expect(low.id).toBe('rings');
     expect(low.complexity).toBeLessThan(middle.complexity);
     expect(middle.complexity).toBeLessThan(high.complexity);
     expect(high.complexity).toBeLessThan(above.complexity);
-    expect(above.id).toBe('weave');
+    expect(above.id).toBe('seal');
+    const figures = STRINGS.map((string) => modeForFrequency(string.frequency).id);
+    expect(new Set(figures).size).toBe(STRINGS.length);
 
     let previous = 0;
     for (const string of STRINGS) {
@@ -65,7 +73,7 @@ describe('cymatic plate', () => {
 
   it('keeps the same figures when the strings are tuned to 432', () => {
     const strings = openStrings(432);
-    expect(modeForFrequency(strings[0].frequency).id).toBe('clover');
+    expect(modeForFrequency(strings[0].frequency).id).toBe('rings');
     expect(modeForFrequency(strings[1].frequency).id).toBe(modeForFrequency(STRINGS[1].frequency).id);
     expect(modeForFrequency(strings[5].frequency).complexity).toBeGreaterThan(
       modeForFrequency(strings[0].frequency).complexity,
@@ -109,7 +117,7 @@ describe('cymatic plate', () => {
     expect(readout.line).toBe(readout.sand);
     expect(readout.sand).not.toBe(SAND_GRAY);
     expect(readout.sand).not.toBe(SAND_GREEN);
-    expect(readout.modeId).toBe('clover');
+    expect(readout.modeId).toBe('rings');
 
     const locked = plateReadout(1, STRINGS[1].frequency);
     expect(locked.locked).toBe(true);
@@ -154,7 +162,7 @@ describe('cymatic plate', () => {
     expect(plate.locked).toBe(true);
     expect(plate.sand).toBe(SAND_GREEN);
     expect(plate.line).toBe(plate.sand);
-    expect(plate.modeId).toBe('loops');
+    expect(plate.modeId).toBe('triad');
 
     const concert = toDisplay(heard!.frequency, 440);
     const drifted = plateReadout(concert.cents, heard!.frequency);
@@ -169,7 +177,7 @@ describe('cymatic plate', () => {
     expect(drifted.organization).toBeLessThan(drifted.closeness);
   });
 
-  it('lays each figure on its nodal lines, clover included', () => {
+  it('lays each figure on round nodal lines', () => {
     expect(GRAIN_COUNT).toBeGreaterThanOrEqual(5000);
     expect(GRAIN_COUNT).toBeLessThanOrEqual(10000);
     expect(Math.max(...GRAIN_RADII)).toBeLessThan(0.8);
@@ -198,24 +206,25 @@ describe('cymatic plate', () => {
       }
     }
 
-    const clover = PLATE_MODES[0];
-    const radii = nodalPoints(clover).map((point) => Math.hypot(point.x - 0.5, point.y - 0.5));
+    const rings = PLATE_MODES[0];
+    const radii = nodalPoints(rings).map((point) => Math.hypot(point.x - 0.5, point.y - 0.5));
     expect(Math.min(...radii)).toBeLessThan(0.2);
-    expect(Math.max(...radii)).toBeGreaterThan(0.3);
+    expect(Math.max(...radii)).toBeGreaterThan(0.22);
+    expect(Math.max(...radii)).toBeLessThanOrEqual(FIGURE_LIMIT);
 
-    const loops = PLATE_MODES.find((mode) => mode.id === 'loops');
-    expect(loops).toBeTruthy();
-    const x = 0.37;
-    const y = 0.62;
+    const triad = PLATE_MODES.find((mode) => mode.id === 'triad');
+    expect(triad).toBeTruthy();
+    const x = 0.62;
+    const y = 0.58;
     const eps = 1e-4;
-    const sample = fieldSample(loops!, x, y);
-    expect(sample.f).toBeCloseTo(fieldValue(loops!, x, y), 8);
+    const sample = fieldSample(triad!, x, y);
+    expect(sample.f).toBeCloseTo(fieldValue(triad!, x, y), 8);
     expect(sample.fx).toBeCloseTo(
-      (fieldValue(loops!, x + eps, y) - fieldValue(loops!, x - eps, y)) / (2 * eps),
+      (fieldValue(triad!, x + eps, y) - fieldValue(triad!, x - eps, y)) / (2 * eps),
       3,
     );
     expect(sample.fy).toBeCloseTo(
-      (fieldValue(loops!, x, y + eps) - fieldValue(loops!, x, y - eps)) / (2 * eps),
+      (fieldValue(triad!, x, y + eps) - fieldValue(triad!, x, y - eps)) / (2 * eps),
       3,
     );
   });
@@ -243,7 +252,7 @@ describe('cymatic plate', () => {
     expect(gather(1)).toBe(gather(closeness(IN_TUNE_CENTS)));
   });
 
-  it('eases the gathering more slowly than the old snap', () => {
+  it('eases the gathering a little more slowly than the previous rates', () => {
     const framesTo = (rate: number, goal: number) => {
       let value = 0;
       let frames = 0;
@@ -254,15 +263,77 @@ describe('cymatic plate', () => {
       return frames;
     };
 
-    const previousOrganize = 0.22;
-    const previousFollow = 0.28;
+    const previousOrganize = 0.07;
+    const previousFollow = 0.1;
     expect(ORGANIZE_EASE).toBeLessThan(previousOrganize);
     expect(GRAIN_FOLLOW).toBeLessThan(previousFollow);
-    expect(ORGANIZE_EASE).toBeGreaterThan(0.04);
-    expect(GRAIN_FOLLOW).toBeGreaterThan(0.05);
-    expect(framesTo(ORGANIZE_EASE, 0.9)).toBeGreaterThan(framesTo(previousOrganize, 0.9) * 2);
-    expect(framesTo(GRAIN_FOLLOW, 0.9)).toBeGreaterThan(framesTo(previousFollow, 0.9) * 2);
-    expect(framesTo(ORGANIZE_EASE, 0.9)).toBeLessThan(120);
-    expect(framesTo(GRAIN_FOLLOW, 0.9)).toBeLessThan(90);
+    expect(ORGANIZE_EASE).toBeGreaterThan(0.035);
+    expect(GRAIN_FOLLOW).toBeGreaterThan(0.045);
+    expect(framesTo(ORGANIZE_EASE, 0.9)).toBeGreaterThan(framesTo(previousOrganize, 0.9));
+    expect(framesTo(GRAIN_FOLLOW, 0.9)).toBeGreaterThan(framesTo(previousFollow, 0.9));
+    expect(framesTo(ORGANIZE_EASE, 0.9)).toBeLessThan(framesTo(previousOrganize, 0.9) * 1.7);
+    expect(framesTo(GRAIN_FOLLOW, 0.9)).toBeLessThan(framesTo(previousFollow, 0.9) * 1.7);
+  });
+
+  it('keeps every figure inside a fading circle', () => {
+    expect(besselJ(0, 0)).toBeCloseTo(1, 8);
+    expect(besselJ(1, 0)).toBe(0);
+    expect(Math.abs(besselJ(0, 2.4048255577))).toBeLessThan(1e-6);
+
+    expect(edgeFade(0)).toBe(1);
+    expect(edgeFade(FADE_START)).toBe(1);
+    expect(edgeFade(FADE_END)).toBe(0);
+    expect(edgeFade(0.9)).toBe(0);
+    expect(SCATTER_RADIUS).toBeGreaterThan(FADE_START);
+    expect(SCATTER_RADIUS).toBeLessThanOrEqual(FADE_END + 0.01);
+    expect(FIGURE_LIMIT).toBeLessThan(FADE_END);
+
+    let previous = edgeFade(FADE_START);
+    for (let step = 1; step <= 8; step++) {
+      const radius = FADE_START + ((FADE_END - FADE_START) * step) / 8;
+      const value = edgeFade(radius);
+      expect(value).toBeLessThan(previous);
+      expect(previous - value).toBeLessThan(0.25);
+      previous = value;
+    }
+
+    const ids = new Set<string>();
+    for (const mode of PLATE_MODES) {
+      ids.add(mode.id);
+      const points = nodalPoints(mode);
+      expect(points.length, mode.id).toBeGreaterThan(80);
+      let balanceX = 0;
+      let balanceY = 0;
+      for (const point of points) {
+        const dx = point.x - 0.5;
+        const dy = point.y - 0.5;
+        const radius = Math.hypot(dx, dy);
+        expect(radius, mode.id).toBeLessThanOrEqual(FIGURE_LIMIT + 1e-9);
+        expect(Math.abs(dx) > 0.36 && Math.abs(dy) > 0.36, mode.id).toBe(false);
+        balanceX += dx;
+        balanceY += dy;
+      }
+      expect(Math.hypot(balanceX, balanceY) / points.length, mode.id).toBeLessThan(0.03);
+
+      if (mode.petals === 0) {
+        expect(fieldValue(mode, 0.66, 0.5)).toBeCloseTo(fieldValue(mode, 0.5, 0.66), 5);
+      } else {
+        const radius = 0.16;
+        const turn = (2 * Math.PI) / mode.petals;
+        const theta = 0.37;
+        const left = fieldValue(
+          mode,
+          0.5 + radius * Math.cos(theta),
+          0.5 + radius * Math.sin(theta),
+        );
+        const right = fieldValue(
+          mode,
+          0.5 + radius * Math.cos(theta + turn),
+          0.5 + radius * Math.sin(theta + turn),
+        );
+        expect(left, mode.id).toBeCloseTo(right, 4);
+      }
+    }
+    expect(ids.size).toBe(PLATE_MODES.length);
   });
 });

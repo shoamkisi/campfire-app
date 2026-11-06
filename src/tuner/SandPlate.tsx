@@ -4,7 +4,9 @@ import {
   GRAIN_FOLLOW,
   GRAIN_RADII,
   ORGANIZE_EASE,
+  SCATTER_RADIUS,
   closeness,
+  edgeFade,
   gather,
   grainRadiusCss,
   modeForFrequency,
@@ -51,8 +53,10 @@ function makeGrains(count: number): Grain[] {
   const rand = mulberry32(0x0c0a11);
   const grains: Grain[] = [];
   for (let i = 0; i < count; i++) {
-    const x = 0.05 + rand() * 0.9;
-    const y = 0.05 + rand() * 0.9;
+    const angle = rand() * Math.PI * 2;
+    const radius = Math.sqrt(rand()) * SCATTER_RADIUS;
+    const x = 0.5 + Math.cos(angle) * radius;
+    const y = 0.5 + Math.sin(angle) * radius;
     grains.push({
       x,
       y,
@@ -182,27 +186,44 @@ export function SandPlate({ hz, cents, onCloseness }: Props) {
         grain.y += (clamp01(aimY) - grain.y) * follow;
       }
 
+      const fadeSteps = 24;
+      const drawn: { x: number; y: number; fade: number }[] = new Array(grains.length);
+      for (let i = 0; i < grains.length; i++) {
+        const grain = grains[i];
+        let x = grain.x;
+        let y = grain.y;
+        if (progress != null) {
+          const wave = waveOffset(x, y, progress);
+          x += wave.x;
+          y += wave.y;
+        }
+        drawn[i] = { x, y, fade: edgeFade(Math.hypot(x - 0.5, y - 0.5)) };
+      }
+
       context.clearRect(0, 0, width, height);
       context.fillStyle = sandColor(shown);
       for (let band = 0; band < GRAIN_RADII.length; band++) {
         const radius = grainRadiusCss(band, shown) * dpr;
-        context.beginPath();
-        for (let i = band; i < grains.length; i += GRAIN_RADII.length) {
-          const grain = grains[i];
-          let x = grain.x;
-          let y = grain.y;
-          if (progress != null) {
-            const wave = waveOffset(x, y, progress);
-            x += wave.x;
-            y += wave.y;
+        for (let step = 0; step < fadeSteps; step++) {
+          context.beginPath();
+          let count = 0;
+          for (let i = band; i < grains.length; i += GRAIN_RADII.length) {
+            const grain = drawn[i];
+            if (grain.fade <= 0.02) continue;
+            const bucket = Math.min(fadeSteps - 1, Math.floor(grain.fade * fadeSteps));
+            if (bucket !== step) continue;
+            count += 1;
+            const px = grain.x * width;
+            const py = grain.y * height;
+            context.moveTo(px + radius, py);
+            context.arc(px, py, radius, 0, Math.PI * 2);
           }
-          const px = x * width;
-          const py = y * height;
-          context.moveTo(px + radius, py);
-          context.arc(px, py, radius, 0, Math.PI * 2);
+          if (count === 0) continue;
+          context.globalAlpha = (step + 0.5) / fadeSteps;
+          context.fill();
         }
-        context.fill();
       }
+      context.globalAlpha = 1;
 
       frame = requestAnimationFrame(tick);
     };
