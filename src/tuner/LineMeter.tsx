@@ -27,7 +27,7 @@ export function LineMeter({ cents, closeness }: Props) {
 
     const tick = () => {
       const target = centsRef.current == null ? 0 : centsRef.current;
-      const follow = reduce ? 1 : tokens.motion.needleFollow;
+      const follow = reduce ? 1 : Math.max(tokens.motion.needleFollow, 0.34);
       shown += (target - shown) * follow;
       if (Math.abs(target - shown) < 0.04) shown = target;
       draw(shown);

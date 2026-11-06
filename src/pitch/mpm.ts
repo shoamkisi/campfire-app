@@ -32,10 +32,10 @@ const DEFAULTS = {
   peakThreshold: 0.9,
   clarityThreshold: 0.75,
   /**
-   * A ringing string falls well under a louder gate while it is still easy to hear.
-   * This stays above numerical silence and the tiny 0.0001 test tone.
+   * Low enough that a fading string is still a pitch, not silence.
+   * Stays above the tiny 0.0001 test tone.
    */
-  rmsThreshold: 0.0015,
+  rmsThreshold: 0.0004,
 };
 
 export function detectPitch(

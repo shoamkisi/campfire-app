@@ -13,8 +13,10 @@ export const SAND_GRAY = '#9C9892';
 export const SAND_GREEN = '#3EAE56';
 export const LETTER_REST = skins.campfire.text;
 
-/** Grains on the plate. Enough to read a figure, light enough for a phone. */
-export const GRAIN_COUNT = 2400;
+/** Fine dust. Enough grains to draw a continuous line, each one a fraction of a pixel. */
+export const GRAIN_COUNT = 6800;
+/** CSS-pixel radii. Smaller than a mosaic block. */
+export const GRAIN_RADII = [0.65, 0.85, 1.05] as const;
 
 /**
  * At this many cents the sand is fully scattered.
@@ -168,16 +170,16 @@ export function nodeScore(mode: PlateMode, x: number, y: number): number {
 export function nodalPoints(mode: PlateMode): readonly NodalPoint[] {
   const cached = pointCache.get(mode.id);
   if (cached) return cached;
-  const grid = 160;
+  const grid = 200;
   const found: NodalPoint[] = [];
   for (let iy = 0; iy < grid; iy++) {
     const y = (iy + 0.5) / grid;
     for (let ix = 0; ix < grid; ix++) {
       const x = (ix + 0.5) / grid;
-      if (nodeScore(mode, x, y) < 0.02) found.push({ x, y });
+      if (nodeScore(mode, x, y) < 0.014) found.push({ x, y });
     }
   }
-  const cap = 1100;
+  const cap = 1800;
   let points = found;
   if (found.length > cap) {
     const step = found.length / cap;
