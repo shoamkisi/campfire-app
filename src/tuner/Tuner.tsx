@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { InkMark } from '../shell/InkMark';
-import { LineMeter } from './LineMeter';
+import { letterColor } from './cymatic';
 import { ReferencePitch } from './ReferencePitch';
+import { SandPlate } from './SandPlate';
 import { previewStatus, type PreviewName } from './preview';
 import './tuner.css';
 import { useReferencePitch } from './useReferencePitch';
@@ -36,19 +37,26 @@ export function Tuner({ preview }: Props) {
 
   const tuning = view.status === 'tuning' ? view.display : null;
   const showStop = preview == null && (view.status === 'listening' || view.status === 'tuning');
+  const [closeness, setCloseness] = useState(0);
+  const closenessRef = useRef(0);
+  const handleCloseness = useCallback((amount: number) => {
+    if (Math.abs(amount - closenessRef.current) < 0.012) return;
+    closenessRef.current = amount;
+    setCloseness(amount);
+  }, []);
 
   return (
     <div className="tuner">
       <div className="tuner-readout">
         <div className="hero-slot" aria-hidden={tuning ? undefined : true}>
           {tuning ? (
-            <p className={tuning.inTune ? 'hero is-in-tune' : 'hero'}>{tuning.letter}</p>
+            <p className="hero" style={{ color: letterColor(closeness) }}>
+              {tuning.letter}
+            </p>
           ) : null}
         </div>
 
-        <div className="meter">
-          <LineMeter tuning={tuning != null} cents={tuning?.cents ?? 0} inTune={tuning?.inTune ?? false} />
-        </div>
+        <SandPlate hz={tuning?.hz ?? null} cents={tuning ? tuning.cents : null} onCloseness={handleCloseness} />
 
         <p className="cents" aria-hidden={tuning ? undefined : true}>
           {tuning?.text ?? ''}

@@ -3,12 +3,19 @@ import { A4, openStrings, toDisplay } from '../pitch/notes';
 import { tone } from '../pitch/synth';
 import type { TunerStatus } from './useTuner';
 
-export type PreviewName = 'idle' | 'listening' | 'denied' | 'flat' | 'intune';
+export type PreviewName = 'idle' | 'listening' | 'denied' | 'far' | 'flat' | 'intune' | 'high';
 
 export function readPreview(search: string): PreviewName | null {
   const value = new URLSearchParams(search).get('preview');
   if (value === 'in-tune' || value === 'intune') return 'intune';
-  if (value === 'idle' || value === 'listening' || value === 'denied' || value === 'flat') {
+  if (
+    value === 'idle' ||
+    value === 'listening' ||
+    value === 'denied' ||
+    value === 'far' ||
+    value === 'flat' ||
+    value === 'high'
+  ) {
     return value;
   }
   return null;
@@ -21,8 +28,8 @@ export function previewStatus(name: PreviewName, a4: number = A4): TunerStatus {
   if (name === 'denied') return { status: 'denied', reason: 'blocked' };
 
   const strings = openStrings(a4);
-  const string = name === 'flat' ? strings[0] : strings[1];
-  const shift = name === 'flat' ? -32 : 1;
+  const string = name === 'high' ? strings[5] : name === 'intune' ? strings[1] : strings[0];
+  const shift = name === 'far' ? -46 : name === 'flat' ? -32 : 1;
   const frequency = string.frequency * 2 ** (shift / 1200);
   const detected = detectPitch(tone(frequency, 48000, 4096), 48000);
   if (!detected) return { status: 'listening' };

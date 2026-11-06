@@ -18,37 +18,20 @@
   justify-content: center;
 }
 
-.meter {
-  width: min(88vw, 380px);
-  margin-top: 1.15rem;
+.tuner .hero {
+  transition: none;
 }
 
-.meter-svg {
+.plate {
+  width: min(74vw, 300px);
+  aspect-ratio: 1;
+  margin-top: 0.15rem;
+}
+
+.plate canvas {
   display: block;
   width: 100%;
-  height: auto;
-  overflow: visible;
-}
-
-.meter-line {
-  fill: none;
-  stroke: var(--ink);
-  stroke-linecap: round;
-  stroke-width: var(--line);
-}
-
-.meter-marker {
-  fill: var(--muted);
-  stroke: none;
-  transition: fill var(--ease-intune) linear;
-}
-
-.meter-svg.is-tuning .meter-marker {
-  fill: var(--ink);
-}
-
-.meter-svg.is-in-tune .meter-marker {
-  fill: var(--ember);
+  height: 100%;
 }
 
 .cents {
