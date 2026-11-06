@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import {
   GRAIN_COUNT,
+  GRAIN_FOLLOW,
   GRAIN_RADII,
+  ORGANIZE_EASE,
   closeness,
   gather,
   grainRadiusCss,
@@ -28,11 +30,6 @@ type Grain = {
   tx: number;
   ty: number;
 };
-
-/** How fast the figure and its green catch a new cents reading. */
-const ORGANIZE_EASE = 0.22;
-/** How fast each grain walks toward that figure. */
-const GRAIN_FOLLOW = 0.28;
 
 function mulberry32(seed: number): () => number {
   let state = seed;

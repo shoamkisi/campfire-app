@@ -11,7 +11,9 @@ import { tone } from '../pitch/synth';
 import { skins } from '../theme/tokens';
 import {
   GRAIN_COUNT,
+  GRAIN_FOLLOW,
   GRAIN_RADII,
+  ORGANIZE_EASE,
   SAND_WANDER,
   gather,
   grainRadiusCss,
@@ -100,7 +102,8 @@ describe('cymatic plate', () => {
     const partial = closeness(32);
     const readout = plateReadout(-32, STRINGS[0].frequency);
     expect(readout.closeness).toBeCloseTo(partial, 8);
-    expect(readout.organization).toBe(readout.closeness);
+    expect(readout.organization).toBeCloseTo(gather(partial), 8);
+    expect(readout.organization).toBeLessThan(0.35);
     expect(readout.locked).toBe(false);
     expect(readout.sand).toBe(sandColor(partial));
     expect(readout.line).toBe(readout.sand);
@@ -162,7 +165,8 @@ describe('cymatic plate', () => {
     expect(drifted.closeness).toBeLessThan(0.8);
     expect(drifted.sand).not.toBe(SAND_GREEN);
     expect(drifted.line).toBe(drifted.sand);
-    expect(drifted.organization).toBe(drifted.closeness);
+    expect(drifted.organization).toBeCloseTo(gather(drifted.closeness), 8);
+    expect(drifted.organization).toBeLessThan(drifted.closeness);
   });
 
   it('lays each figure on its nodal lines, clover included', () => {
@@ -175,8 +179,7 @@ describe('cymatic plate', () => {
     expect(grainRadiusCss(2, 1)).toBe(GRAIN_RADII[2]);
     expect(gather(0)).toBe(0);
     expect(gather(1)).toBe(1);
-    expect(gather(0.64)).toBeGreaterThan(0.64);
-    expect(gather(0.64)).toBeGreaterThan(0.8);
+    expect(gather(closeness(32))).toBeLessThan(0.35);
 
     const loose = sandDrift(1400, 0.7, 0);
     const locked = sandDrift(1400, 0.7, 1);
@@ -215,5 +218,51 @@ describe('cymatic plate', () => {
       (fieldValue(loops!, x, y + eps) - fieldValue(loops!, x, y - eps)) / (2 * eps),
       3,
     );
+  });
+
+  it('scatters a far note and only sharpens the figure as it locks', () => {
+    expect(gather(Number.NaN)).toBe(0);
+    expect(gather(-0.2)).toBe(0);
+    expect(gather(1.4)).toBe(1);
+
+    const far = gather(closeness(46));
+    const hint = gather(closeness(38));
+    const flat = gather(closeness(-32));
+    const nearer = gather(closeness(16));
+    const locked = gather(closeness(0));
+
+    expect(far).toBeLessThan(0.05);
+    expect(hint).toBeGreaterThan(far);
+    expect(hint).toBeLessThan(0.15);
+    expect(flat).toBeGreaterThan(hint);
+    expect(flat).toBeLessThan(0.35);
+    expect(nearer).toBeGreaterThan(flat * 2);
+    expect(nearer).toBeGreaterThan(0.7);
+    expect(nearer).toBeLessThan(0.95);
+    expect(locked).toBe(1);
+    expect(gather(1)).toBe(gather(closeness(IN_TUNE_CENTS)));
+  });
+
+  it('eases the gathering more slowly than the old snap', () => {
+    const framesTo = (rate: number, goal: number) => {
+      let value = 0;
+      let frames = 0;
+      while (value < goal && frames < 2000) {
+        value += (1 - value) * rate;
+        frames += 1;
+      }
+      return frames;
+    };
+
+    const previousOrganize = 0.22;
+    const previousFollow = 0.28;
+    expect(ORGANIZE_EASE).toBeLessThan(previousOrganize);
+    expect(GRAIN_FOLLOW).toBeLessThan(previousFollow);
+    expect(ORGANIZE_EASE).toBeGreaterThan(0.04);
+    expect(GRAIN_FOLLOW).toBeGreaterThan(0.05);
+    expect(framesTo(ORGANIZE_EASE, 0.9)).toBeGreaterThan(framesTo(previousOrganize, 0.9) * 2);
+    expect(framesTo(GRAIN_FOLLOW, 0.9)).toBeGreaterThan(framesTo(previousFollow, 0.9) * 2);
+    expect(framesTo(ORGANIZE_EASE, 0.9)).toBeLessThan(120);
+    expect(framesTo(GRAIN_FOLLOW, 0.9)).toBeLessThan(90);
   });
 });
