@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { InkMark } from '../shell/InkMark';
-import { Gauge } from './Gauge';
-import { Peg } from './Peg';
+import { letterColor } from './cymatic';
+import { ReferencePitch } from './ReferencePitch';
+import { SandPlate } from './SandPlate';
 import { previewStatus, type PreviewName } from './preview';
+import './tuner.css';
+import { useReferencePitch } from './useReferencePitch';
 import { useTuner, type MicReason, type TunerStatus } from './useTuner';
 
 type Props = {
@@ -17,8 +20,12 @@ const DENIED: Record<MicReason, string> = {
 };
 
 export function Tuner({ preview }: Props) {
-  const live = useTuner(preview != null);
-  const previewView = useMemo(() => (preview ? previewStatus(preview) : null), [preview]);
+  const reference = useReferencePitch();
+  const live = useTuner(preview != null, reference.hz);
+  const previewView = useMemo(
+    () => (preview ? previewStatus(preview, reference.hz) : null),
+    [preview, reference.hz],
+  );
   const view = previewView ?? live.view;
   const [spoken, setSpoken] = useState('');
 
@@ -29,38 +36,34 @@ export function Tuner({ preview }: Props) {
   }, [phrase]);
 
   const tuning = view.status === 'tuning' ? view.display : null;
-  const gaugeMode = tuning ? 'tuning' : view.status === 'listening' ? 'live' : 'idle';
-  const showPeg = view.status === 'idle' || view.status === 'requesting' || view.status === 'denied';
   const showStop = preview == null && (view.status === 'listening' || view.status === 'tuning');
+  const [closeness, setCloseness] = useState(0);
+  const closenessRef = useRef(0);
+  const handleCloseness = useCallback((amount: number) => {
+    if (Math.abs(amount - closenessRef.current) < 0.012) return;
+    closenessRef.current = amount;
+    setCloseness(amount);
+  }, []);
 
   return (
-    <>
-      {showStop && (
-        <button type="button" className="stop" onClick={live.stop}>
-          stop
-        </button>
-      )}
+    <div className="tuner">
+      <div className="tuner-readout">
+        <div className="hero-slot" aria-hidden={tuning ? undefined : true}>
+          {tuning ? (
+            <p className="hero" style={{ color: letterColor(closeness) }}>
+              {tuning.letter}
+            </p>
+          ) : null}
+        </div>
 
-      {showPeg && <Peg />}
+        <SandPlate hz={tuning?.hz ?? null} cents={tuning ? tuning.cents : null} onCloseness={handleCloseness} />
 
-      <div className="hero-slot" aria-hidden={tuning ? undefined : true}>
-        {tuning && (
-          <p className={tuning.inTune ? 'hero is-in-tune' : 'hero'}>{tuning.letter}</p>
-        )}
+        <p className="cents" aria-hidden={tuning ? undefined : true}>
+          {tuning?.text ?? ''}
+        </p>
       </div>
 
-      <div className="dial">
-        <Gauge mode={gaugeMode} cents={tuning?.cents ?? 0} inTune={tuning?.inTune ?? false} />
-      </div>
-
-      <div className="caption">
-        {view.status === 'idle' || view.status === 'requesting' ? (
-          <button type="button" className="text-button" onClick={live.start} disabled={preview != null}>
-            listen
-            <InkMark width={28} />
-          </button>
-        ) : null}
-
+      <div className="tuner-controls">
         {view.status === 'denied' ? (
           <>
             <p className="line">{DENIED[view.reason]}</p>
@@ -69,33 +72,26 @@ export function Tuner({ preview }: Props) {
               <InkMark width={28} />
             </button>
           </>
-        ) : null}
+        ) : showStop ? (
+          <button type="button" className="text-button" onClick={live.stop}>
+            stop
+            <InkMark width={28} />
+          </button>
+        ) : (
+          <button type="button" className="text-button" onClick={live.start} disabled={preview != null}>
+            listen
+            <InkMark width={28} />
+          </button>
+        )}
 
-        {view.status === 'listening' ? <p className="line quiet">listening</p> : null}
-
-        {tuning ? (
-          <>
-            {tuning.stringLabel && tuning.stringLabel !== tuning.letter ? (
-              <p className="line">{tuning.stringLabel}</p>
-            ) : null}
-            <p className={centsClass(tuning)}>{tuning.text}</p>
-          </>
-        ) : null}
+        <ReferencePitch hz={reference.hz} onChange={reference.setHz} />
       </div>
-
-      {tuning ? <p className="hz">{Math.round(tuning.hz)} hz</p> : null}
 
       <p className="sr-only" aria-live="polite">
         {spoken}
       </p>
-    </>
+    </div>
   );
-}
-
-function centsClass(display: { inTune: boolean; far: boolean }): string {
-  if (display.inTune) return 'line is-in-tune';
-  if (display.far) return 'line is-far';
-  return 'line';
 }
 
 function phraseFor(view: TunerStatus): string {
@@ -103,7 +99,8 @@ function phraseFor(view: TunerStatus): string {
   if (view.status === 'requesting') return 'asking for the microphone';
   if (view.status === 'denied') return DENIED[view.reason];
   if (view.status === 'tuning') {
-    const where = view.display.stringLabel ? `${view.display.stringLabel}, ` : '';
+    const label = view.display.stringLabel;
+    const where = label && label !== view.display.letter ? `${label}, ` : '';
     return `${view.display.letter}, ${where}${view.display.text}`;
   }
   return '';

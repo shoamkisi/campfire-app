@@ -21,11 +21,13 @@ type Engine = {
   raf: number;
 };
 
-export function useTuner(paused: boolean) {
+export function useTuner(paused: boolean, a4: number) {
   const [view, setView] = useState<TunerStatus>({ status: 'idle' });
   const viewRef = useRef<TunerStatus>(view);
   const engineRef = useRef<Engine | null>(null);
   const generation = useRef(0);
+  const a4Ref = useRef(a4);
+  a4Ref.current = a4;
 
   const publish = useCallback((next: TunerStatus) => {
     if (sameStatus(viewRef.current, next)) return;
@@ -112,7 +114,7 @@ export function useTuner(paused: boolean) {
           publish(
             frequency == null
               ? { status: 'listening' }
-              : { status: 'tuning', display: toDisplay(frequency) },
+              : { status: 'tuning', display: toDisplay(frequency, a4Ref.current) },
           );
         }
         engine.raf = requestAnimationFrame(loop);
