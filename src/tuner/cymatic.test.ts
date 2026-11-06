@@ -98,6 +98,7 @@ describe('cymatic plate', () => {
     expect(readout.organization).toBe(readout.closeness);
     expect(readout.locked).toBe(false);
     expect(readout.sand).toBe(sandColor(partial));
+    expect(readout.line).toBe(readout.sand);
     expect(readout.sand).not.toBe(SAND_GRAY);
     expect(readout.sand).not.toBe(SAND_GREEN);
     expect(readout.modeId).toBe('clover');
@@ -105,6 +106,7 @@ describe('cymatic plate', () => {
     const locked = plateReadout(1, STRINGS[1].frequency);
     expect(locked.locked).toBe(true);
     expect(locked.sand).toBe(SAND_GREEN);
+    expect(locked.line).toBe(SAND_GREEN);
     expect(locked.letter).toBe(SAND_GREEN);
   });
 
@@ -143,6 +145,7 @@ describe('cymatic plate', () => {
     expect(tuned.inTune).toBe(true);
     expect(plate.locked).toBe(true);
     expect(plate.sand).toBe(SAND_GREEN);
+    expect(plate.line).toBe(plate.sand);
     expect(plate.modeId).toBe('loops');
 
     const concert = toDisplay(heard!.frequency, 440);
@@ -153,6 +156,7 @@ describe('cymatic plate', () => {
     expect(drifted.closeness).toBeGreaterThan(0.45);
     expect(drifted.closeness).toBeLessThan(0.8);
     expect(drifted.sand).not.toBe(SAND_GREEN);
+    expect(drifted.line).toBe(drifted.sand);
     expect(drifted.organization).toBe(drifted.closeness);
   });
 

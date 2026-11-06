@@ -10,7 +10,7 @@ The app is meant to be opened from a link, not installed from an app store.
 2. On the phone, open `https://shoamkisi.github.io/campfire-app/`.
 3. Tap **listen**.
 4. When the phone asks, allow the microphone.
-5. Play one open string. The big letter is the note. Sand on the plate is gray and loose when you are far off. As you get closer it turns greener and gathers into a pattern. Within about 5 cents the pattern locks and the sand is green.
+5. Play one open string. The big letter is the note. Sand on the plate is gray and loose when you are far off. The line under the plate shows the same thing: the mark sits left when you are flat and right when you are sharp. As you get closer, the sand and the line turn greener and the sand gathers into a pattern. Within about 5 cents the pattern locks and the sand, the line, and the letter are green.
 6. Tap **A = 440 Hz** if you want a different reference pitch. Choose 432, 440, or 442, or step by one hertz anywhere from 430 to 450. The phone remembers it.
 7. To keep it on the home screen: in Safari, tap Share, then Add to Home Screen. In Chrome, tap the menu, then Install app or Add to Home screen.
 

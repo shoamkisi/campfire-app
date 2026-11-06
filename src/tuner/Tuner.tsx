@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { InkMark } from '../shell/InkMark';
 import { letterColor } from './cymatic';
+import { LineMeter } from './LineMeter';
 import { ReferencePitch } from './ReferencePitch';
 import { SandPlate } from './SandPlate';
 import { previewStatus, type PreviewName } from './preview';
@@ -58,9 +59,9 @@ export function Tuner({ preview }: Props) {
 
         <SandPlate hz={tuning?.hz ?? null} cents={tuning ? tuning.cents : null} onCloseness={handleCloseness} />
 
-        <p className="cents" aria-hidden={tuning ? undefined : true}>
-          {tuning?.text ?? ''}
-        </p>
+        <div className="meter">
+          <LineMeter cents={tuning ? tuning.cents : null} closeness={closeness} />
+        </div>
       </div>
 
       <div className="tuner-controls">
@@ -83,6 +84,10 @@ export function Tuner({ preview }: Props) {
             <InkMark width={28} />
           </button>
         )}
+
+        <p className="cents" aria-hidden={tuning ? undefined : true}>
+          {tuning?.text ?? ''}
+        </p>
 
         <ReferencePitch hz={reference.hz} onChange={reference.setHz} />
       </div>
