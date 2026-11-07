@@ -15,8 +15,8 @@ export const SAND_GRAY = '#9C9892';
 export const SAND_GREEN = '#3EAE56';
 export const LETTER_REST = skins.campfire.text;
 
-/** Fine dust. Enough grains to draw a continuous line, each one a fraction of a pixel. */
-export const GRAIN_COUNT = 6800;
+/** Fine dust. Enough grains to hold a finer mandala without thickening the lines. */
+export const GRAIN_COUNT = 9600;
 /** CSS-pixel radii. The same fine size loose or locked. */
 export const GRAIN_RADII = [0.42, 0.52, 0.64] as const;
 /** Gentle drift, in plate units. It does not shrink when the figure locks. */
@@ -46,22 +46,27 @@ export type PlateMode = {
   k: number;
   /** Wave number of the ring field that bends the petals. */
   q: number;
-  /** How strongly the rings bow the petals into curves. */
+  /** How strongly a pure ring field bows the petals. */
   bow: number;
+  /** Second petal wave. Zero skips it. Nested rings of the same flower. */
+  k2: number;
+  inner: number;
+  /** Multiplied in, so its circles cut through the petals. Zero skips it. */
+  ringK: number;
 };
 
 /**
  * One rounded figure per open string, then a denser one past the high E.
- * These are circular-membrane shapes: rings and curved petals, not a square plate.
+ * Each is a circular mode with nested rings and finer petals, not a square plate.
  */
 export const PLATE_MODES: readonly PlateMode[] = [
-  { id: 'rings', complexity: 1, petals: 0, k: 6.923, q: 1, bow: 0 },
-  { id: 'triad', complexity: 2, petals: 3, k: 6.699, q: 6.058, bow: 0.2 },
-  { id: 'rose', complexity: 3, petals: 4, k: 7.968, q: 6.058, bow: 0.18 },
-  { id: 'bloom', complexity: 4, petals: 5, k: 9.21, q: 6.058, bow: 0.16 },
-  { id: 'lotus', complexity: 5, petals: 6, k: 10.433, q: 6.058, bow: 0.16 },
-  { id: 'crown', complexity: 6, petals: 8, k: 12.836, q: 6.058, bow: 0.2 },
-  { id: 'seal', complexity: 7, petals: 7, k: 11.641, q: 6.058, bow: 0.16 },
+  { id: 'rings', complexity: 1, petals: 0, k: 14.9, q: 7.6, bow: 0.55, k2: 0, inner: 0, ringK: 0 },
+  { id: 'triad', complexity: 2, petals: 6, k: 11.2, q: 5.6, bow: 0.14, k2: 16.4, inner: 0.45, ringK: 9.6 },
+  { id: 'rose', complexity: 3, petals: 8, k: 13.4, q: 6.4, bow: 0.1, k2: 18.2, inner: 0.35, ringK: 8.7 },
+  { id: 'bloom', complexity: 4, petals: 10, k: 15.5, q: 7.2, bow: 0.08, k2: 0, inner: 0, ringK: 10.4 },
+  { id: 'lotus', complexity: 5, petals: 12, k: 17.2, q: 6.8, bow: 0.08, k2: 13, inner: 0.4, ringK: 11.6 },
+  { id: 'crown', complexity: 6, petals: 8, k: 16.4, q: 9.1, bow: 0.12, k2: 11, inner: 0.55, ringK: 12.2 },
+  { id: 'seal', complexity: 7, petals: 14, k: 19.2, q: 8, bow: 0.06, k2: 0, inner: 0, ringK: 13.4 },
 ];
 
 /** Upper edge of each mode, in Hz. The last mode is everything above the last edge. */
@@ -219,7 +224,13 @@ export function fieldValue(mode: PlateMode, x: number, y: number): number {
   const rho = Math.hypot(u, v);
   const theta = Math.atan2(v, u);
   const petal = mode.petals === 0 ? 1 : Math.cos(mode.petals * theta);
-  return besselJ(mode.petals, mode.k * rho) * petal + mode.bow * besselJ(0, mode.q * rho);
+  let flower = besselJ(mode.petals, mode.k * rho) * petal;
+  if (mode.inner !== 0 && mode.k2 !== 0) {
+    flower += mode.inner * besselJ(mode.petals, mode.k2 * rho) * petal;
+  }
+  if (mode.bow !== 0) flower += mode.bow * besselJ(0, mode.q * rho);
+  if (mode.ringK !== 0) flower *= besselJ(0, mode.ringK * rho);
+  return flower;
 }
 
 export function fieldSample(
@@ -246,7 +257,7 @@ export function nodeScore(mode: PlateMode, x: number, y: number): number {
 export function nodalPoints(mode: PlateMode): readonly NodalPoint[] {
   const cached = pointCache.get(mode.id);
   if (cached) return cached;
-  const grid = 200;
+  const grid = 220;
   const found: NodalPoint[] = [];
   for (let iy = 0; iy < grid; iy++) {
     const y = (iy + 0.5) / grid;
@@ -256,7 +267,7 @@ export function nodalPoints(mode: PlateMode): readonly NodalPoint[] {
       if (nodeScore(mode, x, y) < 0.008) found.push({ x, y });
     }
   }
-  const cap = 1800;
+  const cap = 4200;
   let points = found;
   if (found.length > cap) {
     const step = found.length / cap;

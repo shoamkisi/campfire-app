@@ -336,4 +336,15 @@ describe('cymatic plate', () => {
     }
     expect(ids.size).toBe(PLATE_MODES.length);
   });
+
+  it('keeps inner geometry in every locked figure', () => {
+    for (const mode of PLATE_MODES) {
+      const radii = nodalPoints(mode).map((point) => Math.hypot(point.x - 0.5, point.y - 0.5));
+      const inner = radii.filter((radius) => radius < 0.18).length;
+      const outer = radii.filter((radius) => radius > 0.26).length;
+      expect(inner, mode.id).toBeGreaterThan(12);
+      expect(outer, mode.id).toBeGreaterThan(40);
+      expect(mode.petals === 0 || mode.petals >= 6, mode.id).toBe(true);
+    }
+  });
 });
