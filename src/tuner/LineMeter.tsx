@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { tokens } from '../theme/tokens';
 import { sandColor } from './cymatic';
-import { LINE_METER, markerX } from './lineMeter';
+import { LINE_METER, MARK_COLOR, centMarks, markerX } from './lineMeter';
 
 type Props = {
   cents: number | null;
@@ -40,12 +40,14 @@ export function LineMeter({ cents, closeness }: Props) {
   }, []);
 
   const home = markerX(0);
+  const marks = centMarks();
 
   return (
     <svg
       className="meter-svg"
       style={{ color: sandColor(closeness) }}
       viewBox={`0 0 ${LINE_METER.width} ${LINE_METER.height}`}
+      preserveAspectRatio="xMidYMid meet"
       aria-hidden="true"
     >
       <line
@@ -55,6 +57,30 @@ export function LineMeter({ cents, closeness }: Props) {
         x2={LINE_METER.width - LINE_METER.inset}
         y2={LINE_METER.midY}
       />
+      {marks.map((mark) => {
+        const half = mark.role === 'center' ? LINE_METER.centerTickHalf : LINE_METER.tickHalf;
+        return (
+          <g key={mark.cents}>
+            <line
+              className={mark.role === 'center' ? 'meter-tick is-center' : 'meter-tick'}
+              stroke={MARK_COLOR}
+              x1={mark.x}
+              y1={LINE_METER.midY - half}
+              x2={mark.x}
+              y2={LINE_METER.midY + half}
+            />
+            <text
+              className="meter-label"
+              fill={MARK_COLOR}
+              x={mark.x}
+              y={LINE_METER.labelY}
+              textAnchor="middle"
+            >
+              {mark.label}
+            </text>
+          </g>
+        );
+      })}
       <g ref={markerRef} transform={`translate(${home} ${LINE_METER.midY})`}>
         <rect
           className="meter-marker"
