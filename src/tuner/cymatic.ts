@@ -19,8 +19,13 @@ export const LETTER_REST = skins.campfire.text;
 export const GRAIN_COUNT = 9600;
 /** CSS-pixel radii. The same fine size loose or locked. */
 export const GRAIN_RADII = [0.42, 0.52, 0.64] as const;
-/** Gentle drift, in plate units. It does not shrink when the figure locks. */
+/** Drift while the sand is scattered, in plate units. */
 export const SAND_WANDER = 0.011;
+/**
+ * Drift once the note is locked. Still moving, but close enough to the
+ * line that the figure reads as sand rather than a cloud.
+ */
+export const LOCKED_WANDER = 0.0026;
 
 /**
  * How fast the closeness reading eases toward a new cents value.
@@ -149,13 +154,19 @@ export function gather(closeness: number): number {
   return u * u * u;
 }
 
-/** Slow wander around wherever the grain is. Locked sand uses the same reach. */
+/**
+ * Wander around wherever the grain is.
+ * Far from the note the reach stays wide. It tightens only as the note locks,
+ * so an in-tune line does not dissolve into a stipple.
+ */
 export function sandDrift(
   timeMs: number,
   phase: number,
   closeness: number,
 ): { x: number; y: number } {
-  const reach = Number.isFinite(closeness) ? SAND_WANDER : SAND_WANDER;
+  const amount = Number.isFinite(closeness) ? Math.min(1, Math.max(0, closeness)) : 0;
+  const tighten = amount * amount * amount;
+  const reach = SAND_WANDER + (LOCKED_WANDER - SAND_WANDER) * tighten;
   return {
     x: Math.sin(timeMs * 0.00105 + phase) * reach,
     y: Math.cos(timeMs * 0.00082 + phase * 1.7) * reach,

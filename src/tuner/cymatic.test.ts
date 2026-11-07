@@ -17,6 +17,7 @@ import {
   GRAIN_FOLLOW,
   GRAIN_RADII,
   ORGANIZE_EASE,
+  LOCKED_WANDER,
   SAND_WANDER,
   SCATTER_RADIUS,
   besselJ,
@@ -220,12 +221,15 @@ describe('cymatic plate', () => {
 
     const loose = sandDrift(1400, 0.7, 0);
     const locked = sandDrift(1400, 0.7, 1);
-    expect(locked.x).toBeCloseTo(loose.x, 8);
-    expect(locked.y).toBeCloseTo(loose.y, 8);
-    expect(Math.hypot(locked.x, locked.y)).toBeGreaterThan(0.008);
-    expect(Math.hypot(locked.x, locked.y)).toBeLessThanOrEqual(SAND_WANDER * Math.SQRT2 + 1e-9);
+    const farDrift = sandDrift(1400, 0.7, closeness(38));
+    expect(Math.hypot(loose.x, loose.y)).toBeGreaterThan(0.008);
+    expect(Math.hypot(loose.x, loose.y)).toBeLessThanOrEqual(SAND_WANDER * Math.SQRT2 + 1e-9);
+    expect(Math.hypot(locked.x, locked.y)).toBeGreaterThan(0.001);
+    expect(Math.hypot(locked.x, locked.y)).toBeLessThan(LOCKED_WANDER * Math.SQRT2 + 1e-9);
+    expect(Math.hypot(locked.x, locked.y)).toBeLessThan(Math.hypot(loose.x, loose.y) * 0.4);
+    expect(Math.hypot(farDrift.x, farDrift.y)).toBeGreaterThan(Math.hypot(locked.x, locked.y) * 2);
     const later = sandDrift(3200, 0.7, 1);
-    expect(later.x).not.toBeCloseTo(locked.x, 2);
+    expect(later.x).not.toBeCloseTo(locked.x, 3);
 
     for (const mode of PLATE_MODES) {
       const points = nodalPoints(mode);
@@ -404,6 +408,22 @@ describe('cymatic plate', () => {
     const p90 = gaps[Math.floor(gaps.length * 0.9)];
     expect(p90).toBeLessThan(0.02);
     expect(gaps[Math.floor(gaps.length * 0.5)]).toBeGreaterThan(0.001);
+
+    const triad = PLATE_MODES.find((mode) => mode.id === 'triad');
+    expect(triad).toBeTruthy();
+    const disk = [];
+    for (let i = 0; i < 4800; i++) {
+      const angle = i * 2.399;
+      const radius = Math.sqrt((i % 97) / 97) * 0.42;
+      disk.push({ x: 0.5 + Math.cos(angle) * radius, y: 0.5 + Math.sin(angle) * radius });
+    }
+    const aGaps = neighborGaps(packOntoFigure(disk, nodalPoints(triad!))).sort((a, b) => a - b);
+    const eGaps = neighborGaps(packOntoFigure(disk, nodalPoints(crown!))).sort((a, b) => a - b);
+    const aMid = aGaps[Math.floor(aGaps.length * 0.5)];
+    const eMid = eGaps[Math.floor(eGaps.length * 0.5)];
+    expect(aMid).toBeLessThan(0.008);
+    expect(eMid).toBeLessThan(0.008);
+    expect(eMid).toBeLessThan(aMid * 1.8);
   });
 
   it('keeps inner geometry in every locked figure', () => {
