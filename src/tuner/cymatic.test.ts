@@ -37,9 +37,38 @@ import {
   modeForFrequency,
   nodalPoints,
   nodeScore,
+  packOntoFigure,
   plateReadout,
   sandColor,
 } from './cymatic';
+
+function neighborGaps(points: { x: number; y: number }[]): number[] {
+  const cell = 0.02;
+  const cols = Math.ceil(1 / cell);
+  const bins: number[][] = Array.from({ length: cols * cols }, () => []);
+  for (let i = 0; i < points.length; i++) {
+    const cx = Math.max(0, Math.min(cols - 1, Math.floor(points[i].x / cell)));
+    const cy = Math.max(0, Math.min(cols - 1, Math.floor(points[i].y / cell)));
+    bins[cy * cols + cx].push(i);
+  }
+  return points.map((point, index) => {
+    const cx = Math.max(0, Math.min(cols - 1, Math.floor(point.x / cell)));
+    const cy = Math.max(0, Math.min(cols - 1, Math.floor(point.y / cell)));
+    let best = Infinity;
+    for (let y = cy - 2; y <= cy + 2; y++) {
+      if (y < 0 || y >= cols) continue;
+      for (let x = cx - 2; x <= cx + 2; x++) {
+        if (x < 0 || x >= cols) continue;
+        for (const other of bins[y * cols + x]) {
+          if (other === index) continue;
+          const distance = Math.hypot(points[other].x - point.x, points[other].y - point.y);
+          if (distance < best) best = distance;
+        }
+      }
+    }
+    return best;
+  });
+}
 
 function rgb(hex: string): { r: number; g: number; b: number } {
   return {
@@ -335,6 +364,46 @@ describe('cymatic plate', () => {
       }
     }
     expect(ids.size).toBe(PLATE_MODES.length);
+  });
+
+  it('packs locked grains along the figure instead of leaving gaps', () => {
+    const points = [];
+    for (let i = 0; i < 180; i++) {
+      const angle = (i / 180) * Math.PI * 2;
+      points.push({ x: 0.5 + Math.cos(angle) * 0.25, y: 0.5 + Math.sin(angle) * 0.25 });
+    }
+    const homes = [];
+    for (let i = 0; i < 180; i++) {
+      const angle = (i / 180) * 0.35;
+      homes.push({ x: 0.5 + Math.cos(angle) * 0.22, y: 0.5 + Math.sin(angle) * 0.22 });
+    }
+    const packed = packOntoFigure(homes, points);
+    expect(packed).toHaveLength(homes.length);
+    const angles = packed
+      .map((point) => Math.atan2(point.y - 0.5, point.x - 0.5))
+      .sort((a, b) => a - b);
+    let maxGap = angles[0] + Math.PI * 2 - angles[angles.length - 1];
+    for (let i = 1; i < angles.length; i++) maxGap = Math.max(maxGap, angles[i] - angles[i - 1]);
+    expect(maxGap).toBeLessThan(0.25);
+    for (const point of packed) {
+      expect(Math.abs(Math.hypot(point.x - 0.5, point.y - 0.5) - 0.25)).toBeLessThan(0.02);
+    }
+
+    const crown = PLATE_MODES.find((mode) => mode.id === 'crown');
+    expect(crown).toBeTruthy();
+    const figure = nodalPoints(crown!);
+    const sample = [];
+    for (let i = 0; i < 2400; i++) {
+      const angle = i * 2.399;
+      const radius = Math.sqrt((i % 97) / 97) * 0.42;
+      sample.push({ x: 0.5 + Math.cos(angle) * radius, y: 0.5 + Math.sin(angle) * radius });
+    }
+    const onFigure = packOntoFigure(sample, figure);
+    const gaps = neighborGaps(onFigure);
+    gaps.sort((a, b) => a - b);
+    const p90 = gaps[Math.floor(gaps.length * 0.9)];
+    expect(p90).toBeLessThan(0.02);
+    expect(gaps[Math.floor(gaps.length * 0.5)]).toBeGreaterThan(0.001);
   });
 
   it('keeps inner geometry in every locked figure', () => {

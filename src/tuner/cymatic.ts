@@ -267,7 +267,7 @@ export function nodalPoints(mode: PlateMode): readonly NodalPoint[] {
       if (nodeScore(mode, x, y) < 0.008) found.push({ x, y });
     }
   }
-  const cap = 4200;
+  const cap = 9000;
   let points = found;
   if (found.length > cap) {
     const step = found.length / cap;
@@ -276,5 +276,225 @@ export function nodalPoints(mode: PlateMode): readonly NodalPoint[] {
   }
   pointCache.set(mode.id, points);
   return points;
+}
+
+type Point = { x: number; y: number };
+
+/**
+ * Places one grain on each even step of the figure.
+ * Nearest-home assignment piles grains onto a few points and leaves gaps.
+ * These targets stay on the lines, spaced along them, and the grains stay thin.
+ */
+export function packOntoFigure(homes: readonly Point[], points: readonly Point[]): Point[] {
+  if (homes.length === 0) return [];
+  if (points.length === 0) return homes.map((home) => ({ x: home.x, y: home.y }));
+
+  const chains = linkChains(points, 0.011);
+  const slots = evenSlots(points, chains, homes.length);
+  return claimSlots(homes, slots);
+}
+
+function linkChains(points: readonly Point[], link: number): number[][] {
+  const link2 = link * link;
+  const cols = Math.max(1, Math.ceil(1 / link));
+  const bins: number[][] = Array.from({ length: cols * cols }, () => []);
+  const clampC = (value: number) => Math.max(0, Math.min(cols - 1, value));
+  for (let i = 0; i < points.length; i++) {
+    const cx = clampC(Math.floor(points[i].x / link));
+    const cy = clampC(Math.floor(points[i].y / link));
+    bins[cy * cols + cx].push(i);
+  }
+  const used = new Uint8Array(points.length);
+  const nearest = (index: number): number => {
+    const point = points[index];
+    const cx = clampC(Math.floor(point.x / link));
+    const cy = clampC(Math.floor(point.y / link));
+    let best = -1;
+    let bestD = link2;
+    for (let y = cy - 1; y <= cy + 1; y++) {
+      if (y < 0 || y >= cols) continue;
+      for (let x = cx - 1; x <= cx + 1; x++) {
+        if (x < 0 || x >= cols) continue;
+        for (const other of bins[y * cols + x]) {
+          if (used[other] || other === index) continue;
+          const dx = points[other].x - point.x;
+          const dy = points[other].y - point.y;
+          const distance = dx * dx + dy * dy;
+          if (distance < bestD && distance > 1e-10) {
+            bestD = distance;
+            best = other;
+          }
+        }
+      }
+    }
+    return best;
+  };
+
+  const chains: number[][] = [];
+  for (let i = 0; i < points.length; i++) {
+    if (used[i]) continue;
+    used[i] = 1;
+    const chain = [i];
+    let head = i;
+    for (;;) {
+      const next = nearest(head);
+      if (next < 0) break;
+      used[next] = 1;
+      chain.push(next);
+      head = next;
+    }
+    chains.push(chain);
+  }
+  return chains;
+}
+
+function evenSlots(points: readonly Point[], chains: readonly number[][], count: number): Point[] {
+  let total = 0;
+  const lengths: number[] = [];
+  for (const chain of chains) {
+    let length = 0;
+    for (let i = 1; i < chain.length; i++) {
+      length += Math.hypot(
+        points[chain[i]].x - points[chain[i - 1]].x,
+        points[chain[i]].y - points[chain[i - 1]].y,
+      );
+    }
+    lengths.push(length);
+    total += length;
+  }
+  if (total < 1e-6) return points.map((point) => ({ x: point.x, y: point.y }));
+
+  const sample = (spacing: number): Point[] => {
+    const found: Point[] = [];
+    for (const chain of chains) {
+      if (chain.length < 2) continue;
+      let x = points[chain[0]].x;
+      let y = points[chain[0]].y;
+      let carried = 0;
+      for (let i = 1; i < chain.length; i++) {
+        const nextX = points[chain[i]].x;
+        const nextY = points[chain[i]].y;
+        let remain = Math.hypot(nextX - x, nextY - y);
+        if (remain < 1e-8) {
+          x = nextX;
+          y = nextY;
+          continue;
+        }
+        const ux = (nextX - x) / remain;
+        const uy = (nextY - y) / remain;
+        while (carried + remain >= spacing) {
+          const need = spacing - carried;
+          x += ux * need;
+          y += uy * need;
+          found.push({ x, y });
+          remain -= need;
+          carried = 0;
+        }
+        carried += remain;
+        x = nextX;
+        y = nextY;
+      }
+    }
+    return found;
+  };
+
+  let slots = sample(total / count);
+  if (slots.length < count) slots = sample(total / (count + chains.length + 1));
+  if (slots.length === 0) return points.map((point) => ({ x: point.x, y: point.y }));
+  if (slots.length > count) {
+    const step = slots.length / count;
+    const trimmed: Point[] = [];
+    for (let i = 0; i < count; i++) {
+      trimmed.push(slots[Math.min(slots.length - 1, Math.floor((i + 0.5) * step))]);
+    }
+    return trimmed;
+  }
+  return slots;
+}
+
+function claimSlots(homes: readonly Point[], slots: readonly Point[]): Point[] {
+  const cell = 0.02;
+  const cols = Math.max(1, Math.ceil(1 / cell));
+  const bins: number[][] = Array.from({ length: cols * cols }, () => []);
+  const clampC = (value: number) => Math.max(0, Math.min(cols - 1, value));
+  for (let i = 0; i < slots.length; i++) {
+    const cx = clampC(Math.floor(slots[i].x / cell));
+    const cy = clampC(Math.floor(slots[i].y / cell));
+    bins[cy * cols + cx].push(i);
+  }
+  const taken = new Uint8Array(slots.length);
+  const nearestFree = (home: Point): number => {
+    const cx = clampC(Math.floor(home.x / cell));
+    const cy = clampC(Math.floor(home.y / cell));
+    let best = -1;
+    let bestD = Infinity;
+    for (let radius = 0; radius < cols && best < 0; radius++) {
+      for (let y = cy - radius; y <= cy + radius; y++) {
+        if (y < 0 || y >= cols) continue;
+        for (let x = cx - radius; x <= cx + radius; x++) {
+          if (x < 0 || x >= cols) continue;
+          if (radius > 0 && Math.abs(x - cx) !== radius && Math.abs(y - cy) !== radius) continue;
+          for (const index of bins[y * cols + x]) {
+            if (taken[index]) continue;
+            const dx = slots[index].x - home.x;
+            const dy = slots[index].y - home.y;
+            const distance = dx * dx + dy * dy;
+            if (distance < bestD) {
+              bestD = distance;
+              best = index;
+            }
+          }
+        }
+      }
+    }
+    return best;
+  };
+
+  const order = homes.map((_, index) => ({ index, distance: 0 }));
+  for (const item of order) {
+    const home = homes[item.index];
+    let bestD = Infinity;
+    const cx = clampC(Math.floor(home.x / cell));
+    const cy = clampC(Math.floor(home.y / cell));
+    for (let y = Math.max(0, cy - 2); y <= Math.min(cols - 1, cy + 2); y++) {
+      for (let x = Math.max(0, cx - 2); x <= Math.min(cols - 1, cx + 2); x++) {
+        for (const index of bins[y * cols + x]) {
+          const dx = slots[index].x - home.x;
+          const dy = slots[index].y - home.y;
+          const distance = dx * dx + dy * dy;
+          if (distance < bestD) bestD = distance;
+        }
+      }
+    }
+    item.distance = bestD;
+  }
+  order.sort((a, b) => a.distance - b.distance);
+
+  const targets: Point[] = homes.map((home) => ({ x: home.x, y: home.y }));
+  const assigned = new Uint8Array(homes.length);
+  for (const item of order) {
+    const slot = nearestFree(homes[item.index]);
+    if (slot < 0) break;
+    taken[slot] = 1;
+    assigned[item.index] = 1;
+    targets[item.index] = { x: slots[slot].x, y: slots[slot].y };
+  }
+  for (let i = 0; i < homes.length; i++) {
+    if (assigned[i]) continue;
+    let slot = 0;
+    let bestD = Infinity;
+    for (let s = 0; s < slots.length; s++) {
+      const dx = slots[s].x - homes[i].x;
+      const dy = slots[s].y - homes[i].y;
+      const distance = dx * dx + dy * dy;
+      if (distance < bestD) {
+        bestD = distance;
+        slot = s;
+      }
+    }
+    const shift = ((i % 5) - 2) * 0.002;
+    targets[i] = { x: slots[slot].x + shift, y: slots[slot].y };
+  }
+  return targets;
 }
 

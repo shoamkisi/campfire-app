@@ -11,6 +11,7 @@ import {
   grainRadiusCss,
   modeForFrequency,
   nodalPoints,
+  packOntoFigure,
   sandColor,
   sandDrift,
   type NodalPoint,
@@ -70,47 +71,15 @@ function makeGrains(count: number): Grain[] {
   return grains;
 }
 
-/**
- * Nearest point on the figure, so sand gathers into the shape while it is still forming.
- * A coarse grid keeps the search cheap when the note changes.
- */
+/** Even steps along the figure, so locked sand fills the line instead of piling up. */
 function assignTargets(grains: Grain[], points: readonly NodalPoint[]): void {
-  if (points.length === 0) return;
-  const cells = 32;
-  const bins: number[][] = Array.from({ length: cells * cells }, () => []);
-  for (let i = 0; i < points.length; i++) {
-    const cx = Math.min(cells - 1, Math.floor(points[i].x * cells));
-    const cy = Math.min(cells - 1, Math.floor(points[i].y * cells));
-    bins[cy * cells + cx].push(i);
-  }
-
-  for (const grain of grains) {
-    const gx = Math.min(cells - 1, Math.max(0, Math.floor(grain.bx * cells)));
-    const gy = Math.min(cells - 1, Math.max(0, Math.floor(grain.by * cells)));
-    let best = 0;
-    let bestDistance = Infinity;
-    for (let radius = 0; radius < cells; radius++) {
-      if (radius > 0 && bestDistance < ((radius - 1) / cells) ** 2) break;
-      for (let dy = -radius; dy <= radius; dy++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-          if (radius > 0 && Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
-          const cx = gx + dx;
-          const cy = gy + dy;
-          if (cx < 0 || cy < 0 || cx >= cells || cy >= cells) continue;
-          for (const index of bins[cy * cells + cx]) {
-            const ox = points[index].x - grain.bx;
-            const oy = points[index].y - grain.by;
-            const distance = ox * ox + oy * oy;
-            if (distance < bestDistance) {
-              bestDistance = distance;
-              best = index;
-            }
-          }
-        }
-      }
-    }
-    grain.tx = points[best].x;
-    grain.ty = points[best].y;
+  const packed = packOntoFigure(
+    grains.map((grain) => ({ x: grain.bx, y: grain.by })),
+    points,
+  );
+  for (let i = 0; i < grains.length; i++) {
+    grains[i].tx = packed[i].x;
+    grains[i].ty = packed[i].y;
   }
 }
 
