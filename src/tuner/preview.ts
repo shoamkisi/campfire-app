@@ -56,7 +56,7 @@ export function previewStatus(name: PreviewName, a4: number = A4): TunerStatus {
             ? -32
             : name === 'near'
               ? -16
-              : 1;
+              : 0;
   const frequency = string.frequency * 2 ** (shift / 1200);
   const detected = detectPitch(tone(frequency, 48000, 4096), 48000);
   if (!detected) return { status: 'listening' };

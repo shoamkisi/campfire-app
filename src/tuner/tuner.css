@@ -23,8 +23,12 @@
 }
 
 .plate {
-  width: min(100vw, 460px);
+  width: min(100%, 88vw, 42dvh);
+  max-width: 420px;
+  max-height: 42dvh;
   aspect-ratio: 1;
+  flex: 0 1 auto;
+  min-height: 0;
   margin-top: 0;
 }
 
@@ -57,6 +61,22 @@
   fill: currentColor;
 }
 
+.meter-tick {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 1.25px;
+}
+
+.meter-tick.is-center {
+  stroke-width: 1.5px;
+}
+
+.meter-label {
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
 .cents {
   margin: 0.2rem 0 0;
   min-height: 1.35em;
@@ -69,6 +89,7 @@
   flex-direction: column;
   align-items: center;
   width: 100%;
+  flex-shrink: 0;
   padding-bottom: 6px;
 }
 

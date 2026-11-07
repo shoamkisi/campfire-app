@@ -5,10 +5,11 @@ import { REFERENCE_MAX, REFERENCE_MIN, REFERENCE_PRESETS } from './referencePitc
 type Props = {
   hz: number;
   onChange: (hz: number) => void;
+  startOpen?: boolean;
 };
 
-export function ReferencePitch({ hz, onChange }: Props) {
-  const [open, setOpen] = useState(false);
+export function ReferencePitch({ hz, onChange, startOpen = false }: Props) {
+  const [open, setOpen] = useState(startOpen);
   const panelId = useId();
 
   return (
