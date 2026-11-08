@@ -56,7 +56,10 @@ describe('line meter', () => {
     expect(lineColor(-32)).toBe(sandColor(closeness(-32)));
     expect(lineColor(32)).toBe(lineColor(-32));
     expect(lineColor(46)).toBe(sandColor(closeness(46)));
-    expect(lineColor(4)).toBe(sandColor(1));
+    expect(lineColor(2)).toBe(sandColor(1));
+    expect(lineColor(4)).toBe(sandColor(closeness(4)));
+    expect(lineColor(4)).not.toBe(sandColor(1));
+    expect(markerX(4)).not.toBe(markerX(0));
     expect(lineColor(0)).not.toBe(lineColor(32));
     expect(lineColor(null)).not.toBe(lineColor(0));
   });

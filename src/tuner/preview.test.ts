@@ -9,6 +9,7 @@ describe('tuner preview', () => {
     expect(readPreview('?preview=hint')).toBe('hint');
     expect(readPreview('?preview=loose')).toBe('loose');
     expect(readPreview('?preview=near')).toBe('near');
+    expect(readPreview('?preview=close')).toBe('close');
     expect(readPreview('?preview=sharp')).toBe('sharp');
     expect(readPreview('?preview=high')).toBe('high');
     expect(readPreview('')).toBeNull();
@@ -88,5 +89,22 @@ describe('tuner preview', () => {
     expect(hint.display.inTune).toBe(false);
     expect(loose.display.inTune).toBe(false);
     expect(near.display.inTune).toBe(false);
+  });
+
+  it('calls about 4 cents flat by its cents, not in tune', () => {
+    const close = previewStatus('close');
+    expect(close.status).toBe('tuning');
+    if (close.status !== 'tuning') return;
+    expect(close.display.letter).toBe('A');
+    expect(close.display.inTune).toBe(false);
+    expect(close.display.cents).toBeLessThan(-3);
+    expect(close.display.cents).toBeGreaterThan(-5);
+    expect(close.display.text).toBe('4¢ flat');
+    const tuned = previewStatus('intune');
+    expect(tuned.status).toBe('tuning');
+    if (tuned.status !== 'tuning') return;
+    expect(tuned.display.inTune).toBe(true);
+    expect(tuned.display.text).toBe('in tune');
+    expect(Math.abs(tuned.display.cents)).toBeLessThan(0.5);
   });
 });

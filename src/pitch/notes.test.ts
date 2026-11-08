@@ -80,7 +80,7 @@ describe('note and cents math', () => {
     expect(sharp.cents).toBeCloseTo(12.6, 5);
   });
 
-  it('treats ±5 cents as in tune and a hair past that as not', () => {
+  it('treats ±2 cents as in tune and a hair past that as not', () => {
     const a = STRINGS[1].frequency;
     const edge = toDisplay(a * 2 ** (IN_TUNE_CENTS / 1200));
     const past = toDisplay(a * 2 ** ((IN_TUNE_CENTS + 0.2) / 1200));
@@ -89,7 +89,11 @@ describe('note and cents math', () => {
     expect(edge.text).toBe('in tune');
     expect(flatEdge.inTune).toBe(true);
     expect(past.inTune).toBe(false);
-    expect(past.text).toBe('5¢ sharp');
+    expect(past.text).toBe('2¢ sharp');
+    expect(formatOffset(4)).toBe('4¢ sharp');
+    expect(formatOffset(-3)).toBe('3¢ flat');
+    expect(formatOffset(2)).toBe('in tune');
+    expect(formatOffset(-2)).toBe('in tune');
   });
 
   it('does not claim a string for a note that sits between them', () => {
@@ -113,7 +117,7 @@ describe('note and cents math', () => {
     expect(frequencyToMidi(midiToFrequency(64))).toBeCloseTo(64, 8);
     expect(centsBetween(220, 110)).toBeCloseTo(1200, 6);
     expect(formatOffset(0)).toBe('in tune');
-    expect(formatOffset(-4.9)).toBe('in tune');
+    expect(formatOffset(-4.9)).toBe('5¢ flat');
     expect(formatOffset(8)).toBe('8¢ sharp');
     expect(formatOffset(-8)).toBe('8¢ flat');
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RIPPLE_MS, WAVE_REACH, rippleProgress, shouldStartRipple, waveOffset } from './ripple';
+import { RIPPLE_MS, WAVE_PUSH, WAVE_REACH, rippleProgress, shouldStartRipple, waveOffset } from './ripple';
 
 describe('in-tune ripple', () => {
   it('fires once when the reading locks, and again only after it leaves', () => {
@@ -27,7 +27,10 @@ describe('in-tune ripple', () => {
     const crest = waveOffset(0.5 + 0.36, 0.5, progress);
     const behind = waveOffset(0.5 + 0.08, 0.5, progress);
     const ahead = waveOffset(0.5 + 0.62, 0.5, progress);
-    expect(crest.x).toBeGreaterThan(0.04);
+    expect(WAVE_PUSH).toBeLessThan(0.09);
+    expect(WAVE_PUSH).toBeGreaterThan(0.03);
+    expect(crest.x).toBeGreaterThan(0.03);
+    expect(crest.x).toBeLessThan(0.06);
     expect(Math.abs(crest.y)).toBeLessThan(0.001);
     expect(Math.hypot(behind.x, behind.y)).toBeLessThan(Math.hypot(crest.x, crest.y) * 0.25);
     expect(Math.hypot(ahead.x, ahead.y)).toBeLessThan(Math.hypot(crest.x, crest.y) * 0.25);

@@ -1,7 +1,7 @@
 /** Default concert A. Note names and cents use this unless a reference is passed. */
 export const A4 = 440;
 
-export const IN_TUNE_CENTS = 5;
+export const IN_TUNE_CENTS = 2;
 /** How close a pitch must be before we call it an open string. */
 export const STRING_LOCK_CENTS = 50;
 export const NEEDLE_CENTS = 50;
