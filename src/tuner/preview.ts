@@ -12,6 +12,7 @@ export type PreviewName =
   | 'flat'
   | 'loose'
   | 'near'
+  | 'close'
   | 'sharp'
   | 'intune'
   | 'high';
@@ -28,6 +29,7 @@ export function readPreview(search: string): PreviewName | null {
     value === 'flat' ||
     value === 'loose' ||
     value === 'near' ||
+    value === 'close' ||
     value === 'sharp' ||
     value === 'high'
   ) {
@@ -43,7 +45,7 @@ export function previewStatus(name: PreviewName, a4: number = A4): TunerStatus {
   if (name === 'denied') return { status: 'denied', reason: 'blocked' };
 
   const strings = openStrings(a4);
-  const onA = name === 'intune' || name === 'hint' || name === 'loose' || name === 'near';
+  const onA = name === 'intune' || name === 'hint' || name === 'loose' || name === 'near' || name === 'close';
   const string = name === 'high' ? strings[5] : onA ? strings[1] : strings[0];
   const shift =
     name === 'far'
@@ -56,7 +58,9 @@ export function previewStatus(name: PreviewName, a4: number = A4): TunerStatus {
             ? -32
             : name === 'near'
               ? -16
-              : 0;
+              : name === 'close'
+                ? -4
+                : 0;
   const frequency = string.frequency * 2 ** (shift / 1200);
   const detected = detectPitch(tone(frequency, 48000, 4096), 48000);
   if (!detected) return { status: 'listening' };

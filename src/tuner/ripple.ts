@@ -7,7 +7,8 @@ export const RIPPLE_MS = 1500;
 /** How far the crest travels, in plate units from the center. */
 export const WAVE_REACH = 0.72;
 const WAVE_WIDTH = 0.065;
-const WAVE_PUSH = 0.09;
+/** Outward push at the crest. Half the old 0.09 splash, still enough to see. */
+export const WAVE_PUSH = 0.045;
 
 export function shouldStartRipple(
   wasLocked: boolean,
